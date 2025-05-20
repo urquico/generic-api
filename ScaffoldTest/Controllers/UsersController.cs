@@ -13,7 +13,7 @@ using ScaffoldTest.Utils;
 namespace EfScaffoldDemo.Controllers
 {
     [ApiController]
-    [Route("api/v1/users")]
+    [Route("api/v1/test")]
     public class UsersController(AppDbContext context) : ControllerBase
     {
         private readonly AppDbContext _context = context;

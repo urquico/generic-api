@@ -167,3 +167,6 @@ C:\Users\urquico\Desktop\test\ScaffoldTest\ScaffoldTest\bin\Debug\net8.0\runtime
 C:\Users\urquico\Desktop\test\ScaffoldTest\ScaffoldTest\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
 C:\Users\urquico\desktop\test\ScaffoldTest\ScaffoldTest\bin\Debug\net8.0\CSharpier.MsBuild.dll
 C:\Users\urquico\desktop\test\ScaffoldTest\ScaffoldTest\bin\Debug\net8.0\cspell.json
+C:\Users\urquico\desktop\test\ScaffoldTest\ScaffoldTest\obj\Debug\net8.0\ScaffoldTest.sourcelink.json
+C:\Users\urquico\desktop\test\ScaffoldTest\ScaffoldTest\bin\Debug\net8.0\Serilog.Sinks.Console.dll
+C:\Users\urquico\desktop\test\ScaffoldTest\ScaffoldTest\bin\Debug\net8.0\Serilog.Sinks.File.dll
