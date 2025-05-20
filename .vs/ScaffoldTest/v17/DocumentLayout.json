@@ -1,0 +1,45 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\urquico\\Desktop\\test\\ScaffoldTest\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{89628795-E8B2-4BBC-B2F8-4F0E691647EC}|ScaffoldTest\\ScaffoldTest.csproj|c:\\users\\urquico\\desktop\\test\\scaffoldtest\\scaffoldtest\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{89628795-E8B2-4BBC-B2F8-4F0E691647EC}|ScaffoldTest\\ScaffoldTest.csproj|solutionrelative:scaffoldtest\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\urquico\\Desktop\\test\\ScaffoldTest\\ScaffoldTest\\appsettings.json",
+              "RelativeDocumentMoniker": "ScaffoldTest\\appsettings.json",
+              "ToolTip": "C:\\Users\\urquico\\Desktop\\test\\ScaffoldTest\\ScaffoldTest\\appsettings.json",
+              "RelativeToolTip": "ScaffoldTest\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-05-16T02:33:45.334Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
