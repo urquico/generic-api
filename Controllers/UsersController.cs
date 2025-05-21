@@ -13,6 +13,32 @@ namespace ScaffoldTest.Controllers
     {
         private readonly CustomSuccess _response = new();
 
+        [HttpGet("/me")]
+        [ProducesResponseType(typeof(void), 200)]
+        [ProducesResponseType(typeof(object), 500)]
+        public IActionResult GetUserInfo()
+        {
+            try
+            {
+                // TODO: Implement the logic change password
+
+                const string activity = "User information has been retrieved successfully.";
+                var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+
+                return _response.Success(
+                    statusCode: 200,
+                    activity: activity,
+                    ip: ip,
+                    message: activity,
+                    data: null
+                );
+            }
+            catch (Exception ex)
+            {
+                return _response.Error(statusCode: 500, e: ex);
+            }
+        }
+
         /**
          * ChangePassword endpoint allows the authenticated user to change their password.
          *
