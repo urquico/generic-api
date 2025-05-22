@@ -2,3 +2,5 @@
 /.vs/*
 
 .env
+/obj/
+/bin/
