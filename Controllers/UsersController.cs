@@ -81,7 +81,7 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Update the authenticated user's information.")]
-        public IActionResult PatchUserInfo()
+        public IActionResult PatchUserInfo([FromBody] UpdateUserInfoRequestDto updateUserInfoDto)
         {
             try
             {
