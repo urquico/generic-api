@@ -14,6 +14,8 @@ namespace GenericApi.Controllers
     [Route("api/v1/users")]
     public class UsersController : ControllerBase
     {
+        private readonly CustomSuccess _response = new();
+
         /**
          * GetUserInfo endpoint retrieves the authenticated user's information.
          *
@@ -31,7 +33,6 @@ namespace GenericApi.Controllers
          *   "error": "An error occurred while retrieving user information."
          * }
         */
-        private readonly CustomSuccess _response = new();
 
         [HttpGet("/me")]
         [ProducesResponseType(typeof(void), 200)]
