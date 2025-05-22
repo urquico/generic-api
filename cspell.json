@@ -6,7 +6,8 @@
   "words": [
     "Dtos",
     "mwss",
-    "Serilog"
+    "Serilog",
+    "Swashbuckle"
   ],
   "ignoreWords": [],
   "import": []
