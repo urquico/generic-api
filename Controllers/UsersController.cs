@@ -34,7 +34,7 @@ namespace GenericApi.Controllers
          * }
         */
 
-        [HttpGet("/me")]
+        [HttpGet("me")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Retrieve the authenticated user's information.")]
@@ -78,7 +78,7 @@ namespace GenericApi.Controllers
          *   "error": "An error occurred while updating user information."
          * }
         */
-        [HttpPatch("/me")]
+        [HttpPatch("me")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Update the authenticated user's information.")]
@@ -122,7 +122,7 @@ namespace GenericApi.Controllers
          *   "error": "An error occurred while changing the password."
          * }
          */
-        [HttpPatch("/me/password")]
+        [HttpPatch("me/password")]
         [ProducesResponseType(typeof(void), 201)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Change the authenticated user's password.")]

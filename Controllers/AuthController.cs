@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Utils;
-using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -34,7 +33,7 @@ namespace GenericApi.Controllers
          *   "error": "An error occurred during signup."
          * }
         */
-        [HttpPost("/signup")]
+        [HttpPost("signup")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User signup")]
@@ -79,7 +78,7 @@ namespace GenericApi.Controllers
          *   "error": "An error occurred during login."
          * }
         */
-        [HttpPost("/login")]
+        [HttpPost("login")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User login")]
@@ -123,7 +122,7 @@ namespace GenericApi.Controllers
          *   "error": "An error occurred during logout."
          * }
         */
-        [HttpPost("/logout")]
+        [HttpPost("logout")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User logout")]
