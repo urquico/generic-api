@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
-namespace ScaffoldTest.Models;
+namespace GenericApi.Models;
 
 public partial class AppDbContext : DbContext
 {
