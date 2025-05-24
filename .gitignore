@@ -4,3 +4,5 @@
 .env
 /obj/
 /bin/
+
+/Models/AppDbContext.cs
