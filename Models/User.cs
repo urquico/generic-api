@@ -35,7 +35,9 @@ public partial class User
 
     public virtual KeyCategory? Status { get; set; }
 
-    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } = new List<UserSecurityQuestion>();
+    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } =
+        new List<UserSecurityQuestion>();
 
-    public virtual ICollection<UserSpecialPermission> UserSpecialPermissions { get; set; } = new List<UserSpecialPermission>();
+    public virtual ICollection<UserSpecialPermission> UserSpecialPermissions { get; set; } =
+        new List<UserSpecialPermission>();
 }

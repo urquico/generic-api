@@ -27,5 +27,6 @@ public partial class ModulePermission
 
     public virtual Module? Module { get; set; }
 
-    public virtual ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+    public virtual ICollection<RolePermission> RolePermissions { get; set; } =
+        new List<RolePermission>();
 }
