@@ -7,12 +7,13 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure AppDbContext with SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
+
 builder.Services.AddControllers();
 
-// JWT Configuration
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder
     .Services.AddAuthentication(options =>
@@ -40,12 +41,9 @@ builder
     });
 
 builder.Services.AddScoped<TokenService>();
-
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(options =>
 {
     options.EnableAnnotations();
@@ -57,7 +55,6 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -66,6 +63,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

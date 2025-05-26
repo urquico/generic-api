@@ -16,6 +16,23 @@ namespace GenericApi.Services.Auth
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Calculate initial delay until next 8:00 AM UTC+8
+            var now = DateTime.UtcNow.AddHours(8);
+            var nextRun = new DateTime(now.Year, now.Month, now.Day, 8, 0, 0, DateTimeKind.Utc);
+
+            if (now > nextRun)
+            {
+                nextRun = nextRun.AddDays(1);
+            }
+
+            var initialDelay = nextRun - now;
+            if (initialDelay < TimeSpan.Zero)
+            {
+                initialDelay = TimeSpan.Zero;
+            }
+
+            await Task.Delay(initialDelay, stoppingToken);
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 using (var scope = _serviceProvider.CreateScope())
@@ -23,23 +40,9 @@ namespace GenericApi.Services.Auth
                     var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
                     tokenService.DeleteExpiredRefreshTokens();
                 }
-                // run every 8:00AM
-                var now = DateTime.UtcNow.AddHours(8); // Adjust to your local time zone if necessary
-                var nextRun = new DateTime(now.Year, now.Month, now.Day, 8, 0, 0, DateTimeKind.Utc);
 
-                if (now > nextRun)
-                {
-                    nextRun = nextRun.AddDays(1);
-                }
-
-                var delay = nextRun - now;
-
-                if (delay < TimeSpan.Zero)
-                {
-                    delay = TimeSpan.Zero;
-                }
-
-                await Task.Delay(delay, stoppingToken);
+                // Wait 24 hours for the next run
+                await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
             }
         }
     }
