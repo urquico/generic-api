@@ -101,6 +101,28 @@ namespace GenericApi.Services.Auth
             return refreshToken;
         }
 
+        public UserJwtDto GetUserFromAccessToken(string accessToken)
+        {
+            var jwtSettings = _configuration.GetSection("Jwt");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.ReadJwtToken(accessToken);
+
+            if (token == null)
+            {
+                throw new Exception("Invalid access token");
+            }
+
+            var userClaim = token.Claims.FirstOrDefault(c => c.Type == "user");
+
+            if (userClaim == null)
+            {
+                throw new Exception("User claim not found in access token");
+            }
+
+            return System.Text.Json.JsonSerializer.Deserialize<UserJwtDto>(userClaim.Value)
+                ?? throw new Exception("Failed to deserialize user from access token");
+        }
+
         public void DeleteExpiredRefreshTokens()
         {
             var now = DateTime.UtcNow;

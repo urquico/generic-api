@@ -298,7 +298,48 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // TODO: Implement the logic for user logout
+                var accessToken = Request.Cookies["accessToken"];
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Token is missing."),
+                        saveLog: true
+                    );
+                }
+
+                // get user claims from the access token
+                var user = _tokenService.GetUserFromAccessToken(accessToken);
+
+                // revoke the refresh token and clear the cookies
+                if (Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
+                {
+                    var token = _context.RefreshTokens.FirstOrDefault(rt =>
+                        rt.Token == refreshToken
+                    );
+                    if (token == null)
+                    {
+                        Response.Cookies.Delete("refreshToken");
+                        return _response.Error(
+                            statusCode: 401,
+                            e: new Exception("Invalid Token."),
+                            saveLog: true
+                        );
+                    }
+                    else
+                    {
+                        // Mark the token as revoked
+                        token.RevokedAt = DateTime.UtcNow;
+                        token.IsRevoked = true;
+                        token.RevokedBy = user.Id.ToString();
+                        _context.RefreshTokens.Update(token);
+                        _context.SaveChanges();
+                    }
+
+                    // clear the cookies
+                    Response.Cookies.Delete("refreshToken");
+                    Response.Cookies.Delete("accessToken");
+                }
 
                 const string activity = "You have successfully logged out.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
