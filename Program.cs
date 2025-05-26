@@ -2,6 +2,7 @@ using System.Text;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -26,6 +27,7 @@ builder.Services.AddCors(options =>
 });
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
+
 builder
     .Services.AddAuthentication(options =>
     {
@@ -49,7 +51,26 @@ builder
                 )
             ),
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Cookies.ContainsKey("accessToken"))
+                {
+                    context.Token = context.Request.Cookies["accessToken"];
+                }
+                return Task.CompletedTask;
+            },
+        };
     });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Permission", policy => policy.Requirements.Add(new PermissionRequirement()));
+});
+
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();

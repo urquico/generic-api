@@ -37,7 +37,9 @@ public partial class User
 
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 
-    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } = new List<UserSecurityQuestion>();
+    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } =
+        new List<UserSecurityQuestion>();
 
-    public virtual ICollection<UserSpecialPermission> UserSpecialPermissions { get; set; } = new List<UserSpecialPermission>();
+    public virtual ICollection<UserSpecialPermission> UserSpecialPermissions { get; set; } =
+        new List<UserSpecialPermission>();
 }

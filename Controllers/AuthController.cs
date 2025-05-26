@@ -7,6 +7,7 @@ using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using UAParser;
@@ -14,7 +15,9 @@ using UAParser;
 namespace GenericApi.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/v1/auth")]
+    [SwaggerTag("Authentication and Authorization")]
     public class AuthController(TokenService tokenService, IConfiguration configuration)
         : ControllerBase
     {
@@ -44,6 +47,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("signup")]
+        [PermissionAuthorize("CanSignup")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User signup")]
@@ -89,6 +93,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("login")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User login")]
@@ -197,6 +202,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("refresh")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 401)]
         [ProducesResponseType(typeof(object), 500)]
@@ -291,6 +297,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("logout")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User logout")]
@@ -298,19 +305,6 @@ namespace GenericApi.Controllers
         {
             try
             {
-                var accessToken = Request.Cookies["accessToken"];
-                if (string.IsNullOrEmpty(accessToken))
-                {
-                    return _response.Error(
-                        statusCode: 401,
-                        e: new Exception("Token is missing."),
-                        saveLog: true
-                    );
-                }
-
-                // get user claims from the access token
-                var user = _tokenService.GetUserFromAccessToken(accessToken);
-
                 // revoke the refresh token and clear the cookies
                 if (Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
                 {
@@ -330,7 +324,7 @@ namespace GenericApi.Controllers
                     {
                         // Mark the token as revoked
                         token.RevokedAt = DateTime.UtcNow;
-                        token.RevokedBy = user.Id.ToString();
+                        token.RevokedBy = token.UserId.ToString();
                         _context.RefreshTokens.Update(token);
                         _context.SaveChanges();
                     }

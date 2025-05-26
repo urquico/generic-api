@@ -51,6 +51,8 @@ namespace GenericApi.Services.Auth
                 // Add other properties as needed
             };
 
+            var testPermissions = new List<string> { "UserManagement.GetAllUsers" };
+
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Email),
@@ -60,7 +62,16 @@ namespace GenericApi.Services.Auth
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
                 ),
                 new("user", System.Text.Json.JsonSerializer.Serialize(userDto)),
+                // Add roles and permissions claims
+                // TODO: Insert roles and permissions dynamically from the database
+                new(ClaimTypes.Role, "Admin"),
             };
+
+            // persisting permissions in the claims
+            foreach (var permission in testPermissions)
+            {
+                claims.Add(new Claim("permission", permission));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],

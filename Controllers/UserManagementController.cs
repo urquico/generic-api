@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.UserManagement;
+using GenericApi.Services.Auth;
 using GenericApi.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -34,6 +35,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpGet("all")]
+        [PermissionAuthorize("UserManagement.GetAllUsers")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Get all users with optional filters.")]
