@@ -35,7 +35,7 @@ namespace GenericApi.Services.Auth
             var keyString = jwtSettings["Key"] ?? throw new Exception("JWT Key is missing");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15");
+            var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "2");
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
             // TODO: Every time an access token is generated, get the roles and list of permissions for the user from the database and add them to the claims.
@@ -68,12 +68,16 @@ namespace GenericApi.Services.Auth
 
             var refreshToken = Convert.ToBase64String(randomBytes);
 
+            var jwtSettings = _configuration.GetSection("Jwt");
+            var expiresDays = double.Parse(jwtSettings["RefreshTokenExpirationDays"] ?? "5");
+
             // save the refresh token in the database
             _context.RefreshTokens.Add(
                 new RefreshToken
                 {
                     Token = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    // TODO: Change AddMinutes to AddDays for refresh token expiration after testing
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(expiresDays),
                     CreatedAt = DateTime.UtcNow,
                     UserId = userId,
                     UserAgent = userAgent,
