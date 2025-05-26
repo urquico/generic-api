@@ -330,7 +330,6 @@ namespace GenericApi.Controllers
                     {
                         // Mark the token as revoked
                         token.RevokedAt = DateTime.UtcNow;
-                        token.IsRevoked = true;
                         token.RevokedBy = user.Id.ToString();
                         _context.RefreshTokens.Update(token);
                         _context.SaveChanges();

@@ -23,8 +23,7 @@ public partial class Role
 
     public int? DeletedBy { get; set; }
 
-    public virtual ICollection<RoleModulePermission> RoleModulePermissions { get; set; } =
-        new List<RoleModulePermission>();
+    public virtual ICollection<RoleModulePermission> RoleModulePermissions { get; set; } = new List<RoleModulePermission>();
 
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }

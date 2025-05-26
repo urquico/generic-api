@@ -23,6 +23,5 @@ public partial class SecurityQuestion
 
     public int? DeletedBy { get; set; }
 
-    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } =
-        new List<UserSecurityQuestion>();
+    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } = new List<UserSecurityQuestion>();
 }

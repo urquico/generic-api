@@ -15,8 +15,6 @@ public partial class RefreshToken
 
     public string? IpAddress { get; set; }
 
-    public bool? IsRevoked { get; set; }
-
     public DateTime ExpiresAt { get; set; }
 
     public DateTime? CreatedAt { get; set; }
