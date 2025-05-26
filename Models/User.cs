@@ -31,6 +31,8 @@ public partial class User
 
     public int? DeletedBy { get; set; }
 
+    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
     public virtual KeyCategory? Status { get; set; }
 
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();

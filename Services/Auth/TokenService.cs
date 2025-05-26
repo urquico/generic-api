@@ -6,21 +6,30 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using GenericApi.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
 namespace GenericApi.Services.Auth
 {
-    public class TokenService
+    public class TokenService(IConfiguration configuration)
     {
-        private readonly IConfiguration _configuration;
+        private readonly IConfiguration _configuration = configuration;
 
-        public TokenService(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+        private readonly AppDbContext _context = new();
 
-        public string GenerateAccessToken(string email)
+        private readonly Serilog.ILogger _logger = Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .WriteTo.File(
+                "refresh/log.txt",
+                rollingInterval: RollingInterval.Day,
+                restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information
+            )
+            .CreateLogger();
+
+        public string GenerateAccessToken(User user)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
             var keyString = jwtSettings["Key"] ?? throw new Exception("JWT Key is missing");
@@ -29,14 +38,17 @@ namespace GenericApi.Services.Auth
             var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15");
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
-            var claims = new[]
+            // TODO: Every time an access token is generated, get the roles and list of permissions for the user from the database and add them to the claims.
+
+            var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(
+                new(JwtRegisteredClaimNames.Sub, user.Email),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new(
                     JwtRegisteredClaimNames.Iat,
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
                 ),
+                new("user", System.Text.Json.JsonSerializer.Serialize(user)),
             };
 
             var token = new JwtSecurityToken(
@@ -50,13 +62,49 @@ namespace GenericApi.Services.Auth
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public string GenerateRefreshToken()
+        public string GenerateRefreshToken(int userId, string userAgent, string? ipAddress = null)
         {
             var randomBytes = RandomNumberGenerator.GetBytes(64);
 
-            // TODO: Store the refresh token in the database with the user ID and expiration date
+            var refreshToken = Convert.ToBase64String(randomBytes);
 
-            return Convert.ToBase64String(randomBytes);
+            // save the refresh token in the database
+            _context.RefreshTokens.Add(
+                new RefreshToken
+                {
+                    Token = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = userId,
+                    UserAgent = userAgent,
+                    IpAddress = ipAddress ?? "Unknown IP",
+                }
+            );
+
+            _context.SaveChanges();
+
+            return refreshToken;
+        }
+
+        public void DeleteExpiredRefreshTokens()
+        {
+            var now = DateTime.UtcNow;
+            var expiredTokens = _context.RefreshTokens.Where(rt => rt.ExpiresAt < now).ToList();
+
+            if (expiredTokens.Count != 0)
+            {
+                _context.RefreshTokens.RemoveRange(expiredTokens);
+                _context.SaveChanges();
+                _logger.Information(
+                    "Deleted {Count} expired refresh tokens at {Time}",
+                    expiredTokens.Count,
+                    now
+                );
+            }
+            else
+            {
+                _logger.Information("No expired refresh tokens to delete at {Time}", now);
+            }
         }
     }
 }

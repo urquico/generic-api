@@ -30,11 +30,18 @@ builder
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    jwtSettings["Key"]
+                        ?? throw new InvalidOperationException("JWT Key is not configured.")
+                )
+            ),
         };
     });
 
 builder.Services.AddScoped<TokenService>();
+
+builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

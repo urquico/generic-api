@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
@@ -8,6 +9,7 @@ using GenericApi.Services.Auth;
 using GenericApi.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using UAParser;
 
 namespace GenericApi.Controllers
 {
@@ -119,14 +121,30 @@ namespace GenericApi.Controllers
                 }
 
                 // Generate Tokens
-                var accessToken = _tokenService.GenerateAccessToken(email);
-                var refreshToken = _tokenService.GenerateRefreshToken();
+                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+
+                var userAgent = Request.Headers["User-Agent"].ToString();
+                if (string.IsNullOrEmpty(userAgent))
+                {
+                    userAgent = "Unknown User Agent";
+                }
+
+                var uaParser = Parser.GetDefault();
+                ClientInfo clientInfo = uaParser.Parse(userAgent);
+
+                string browser = clientInfo.UA.Family;
+                string os = clientInfo.OS.Family;
+                string device = clientInfo.Device.Family;
+
+                string agentName = $"{browser} on {os} ({device})";
+
+                var accessToken = _tokenService.GenerateAccessToken(user);
+                var refreshToken = _tokenService.GenerateRefreshToken(user.Id, agentName, ip);
 
                 // Set tokens as HttpOnly cookies
                 SetAuthCookies(accessToken, refreshToken);
 
                 const string activity = "You have successfully logged in.";
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
                     statusCode: 200,
