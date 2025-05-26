@@ -11,7 +11,7 @@ public partial class UserSpecialPermission
 
     public int PermissionId { get; set; }
 
-    public int? AccessStatus { get; set; }
+    public bool? AccessStatus { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GenericApi.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialDB : Migration
+    public partial class AddedInitialDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -76,6 +76,7 @@ namespace GenericApi.Migrations
                     updated_by = table.Column<int>(type: "int", nullable: true),
                     deleted_at = table.Column<DateTime>(type: "datetime2", nullable: true),
                     deleted_by = table.Column<int>(type: "int", nullable: true),
+                    module_status = table.Column<bool>(type: "bit", nullable: true),
                 },
                 constraints: table =>
                 {
@@ -110,7 +111,7 @@ namespace GenericApi.Migrations
                         maxLength: 100,
                         nullable: false
                     ),
-                    role_status = table.Column<int>(type: "int", nullable: true),
+                    role_status = table.Column<bool>(type: "bit", nullable: true),
                     created_at = table.Column<DateTime>(
                         type: "datetime2",
                         nullable: true,
@@ -192,7 +193,6 @@ namespace GenericApi.Migrations
                         maxLength: 255,
                         nullable: false
                     ),
-                    role_id = table.Column<int>(type: "int", nullable: true),
                     status_id = table.Column<int>(type: "int", nullable: true),
                     created_at = table.Column<DateTime>(
                         type: "datetime2",
@@ -258,6 +258,49 @@ namespace GenericApi.Migrations
             );
 
             migrationBuilder.CreateTable(
+                name: "user_roles",
+                schema: "fmis",
+                columns: table => new
+                {
+                    id = table
+                        .Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    user_id = table.Column<int>(type: "int", nullable: false),
+                    role_id = table.Column<int>(type: "int", nullable: false),
+                    created_at = table.Column<DateTime>(
+                        type: "datetime2",
+                        nullable: true,
+                        defaultValueSql: "(getdate())"
+                    ),
+                    created_by = table.Column<int>(type: "int", nullable: true),
+                    updated_at = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    updated_by = table.Column<int>(type: "int", nullable: true),
+                    deleted_at = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    deleted_by = table.Column<int>(type: "int", nullable: true),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__user_rol__3213E83F4106E08B", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_user_roles_role",
+                        column: x => x.role_id,
+                        principalSchema: "fmis",
+                        principalTable: "roles",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade
+                    );
+                    table.ForeignKey(
+                        name: "FK_user_roles_user",
+                        column: x => x.user_id,
+                        principalSchema: "fmis",
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
+
+            migrationBuilder.CreateTable(
                 name: "user_security_questions",
                 schema: "fmis",
                 columns: table => new
@@ -315,7 +358,7 @@ namespace GenericApi.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     user_id = table.Column<int>(type: "int", nullable: false),
                     permission_id = table.Column<int>(type: "int", nullable: false),
-                    access_status = table.Column<int>(type: "int", nullable: true),
+                    access_status = table.Column<bool>(type: "bit", nullable: true),
                     created_at = table.Column<DateTime>(
                         type: "datetime2",
                         nullable: true,
@@ -342,7 +385,7 @@ namespace GenericApi.Migrations
             );
 
             migrationBuilder.CreateTable(
-                name: "role_permissions",
+                name: "role_module_permissions",
                 schema: "fmis",
                 columns: table => new
                 {
@@ -408,15 +451,29 @@ namespace GenericApi.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_role_permissions_permission_id",
                 schema: "fmis",
-                table: "role_permissions",
+                table: "role_module_permissions",
                 column: "permission_id"
             );
 
             migrationBuilder.CreateIndex(
                 name: "IX_role_permissions_role_id",
                 schema: "fmis",
-                table: "role_permissions",
+                table: "role_module_permissions",
                 column: "role_id"
+            );
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_roles_role_id",
+                schema: "fmis",
+                table: "user_roles",
+                column: "role_id"
+            );
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_roles_user_id",
+                schema: "fmis",
+                table: "user_roles",
+                column: "user_id"
             );
 
             migrationBuilder.CreateIndex(
@@ -459,7 +516,9 @@ namespace GenericApi.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "role_permissions", schema: "fmis");
+            migrationBuilder.DropTable(name: "role_module_permissions", schema: "fmis");
+
+            migrationBuilder.DropTable(name: "user_roles", schema: "fmis");
 
             migrationBuilder.DropTable(name: "user_security_questions", schema: "fmis");
 

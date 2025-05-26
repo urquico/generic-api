@@ -3,15 +3,13 @@ using System.Collections.Generic;
 
 namespace GenericApi.Models;
 
-public partial class ModulePermission
+public partial class UserRole
 {
     public int Id { get; set; }
 
-    public string PermissionName { get; set; } = null!;
+    public int UserId { get; set; }
 
-    public int? PermissionStatus { get; set; }
-
-    public int? ModuleId { get; set; }
+    public int RoleId { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
@@ -25,8 +23,7 @@ public partial class ModulePermission
 
     public int? DeletedBy { get; set; }
 
-    public virtual Module? Module { get; set; }
+    public virtual Role Role { get; set; } = null!;
 
-    public virtual ICollection<RoleModulePermission> RoleModulePermissions { get; set; } =
-        new List<RoleModulePermission>();
+    public virtual User User { get; set; } = null!;
 }

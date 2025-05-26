@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
+using GenericApi.Models;
+using GenericApi.Services.Auth;
 using GenericApi.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -11,9 +13,13 @@ namespace GenericApi.Controllers
 {
     [ApiController]
     [Route("api/v1/auth")]
-    public class AuthController : ControllerBase
+    public class AuthController(TokenService tokenService) : ControllerBase
     {
         private readonly CustomSuccess _response = new();
+
+        private readonly TokenService _tokenService = tokenService;
+
+        private readonly AppDbContext _context = new();
 
         /**
          * Signup endpoint allows a new user to register.
@@ -86,7 +92,38 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // TODO: Implement the logic for user login
+                // validate the user credentials
+                var email = loginRequestDto.Email;
+                var password = loginRequestDto.Password;
+
+                var user = _context.Users.FirstOrDefault(u => u.Email == email);
+
+                if (user == null)
+                {
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Invalid email."),
+                        saveLog: true
+                    );
+                }
+
+                // TODO: Implement password hashing and verification
+                // check if the password matches the stored password
+                if (user.Password != password)
+                {
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Invalid password."),
+                        saveLog: true
+                    );
+                }
+
+                // Generate Tokens
+                var accessToken = _tokenService.GenerateAccessToken(email);
+                var refreshToken = _tokenService.GenerateRefreshToken();
+
+                // Set tokens as HttpOnly cookies
+                SetAuthCookies(accessToken, refreshToken);
 
                 const string activity = "You have successfully logged in.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
@@ -147,6 +184,33 @@ namespace GenericApi.Controllers
             {
                 return _response.Error(statusCode: 500, e: ex);
             }
+        }
+
+        private void SetAuthCookies(string accessToken, string refreshToken)
+        {
+            Response.Cookies.Append(
+                "accessToken",
+                accessToken,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // Set to true in production (requires HTTPS)
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddMinutes(2),
+                }
+            );
+
+            Response.Cookies.Append(
+                "refreshToken",
+                refreshToken,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // Set to true in production (requires HTTPS)
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddDays(7),
+                }
+            );
         }
     }
 }

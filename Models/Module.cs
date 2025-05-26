@@ -25,6 +25,8 @@ public partial class Module
 
     public int? DeletedBy { get; set; }
 
+    public bool? ModuleStatus { get; set; }
+
     public virtual Module? GrandParent { get; set; }
 
     public virtual ICollection<Module> InverseGrandParent { get; set; } = new List<Module>();

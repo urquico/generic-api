@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GenericApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250524150751_InitialDB")]
-    partial class InitialDB
+    [Migration("20250526073522_AddedInitialDB")]
+    partial class AddedInitialDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -118,6 +118,10 @@ namespace GenericApi.Migrations
                         .HasColumnType("nvarchar(255)")
                         .HasColumnName("module_name");
 
+                    b.Property<bool?>("ModuleStatus")
+                        .HasColumnType("bit")
+                        .HasColumnName("module_status");
+
                     b.Property<int?>("ParentId")
                         .HasColumnType("int")
                         .HasColumnName("parent_id");
@@ -133,9 +137,9 @@ namespace GenericApi.Migrations
                     b.HasKey("Id")
                         .HasName("PK__modules__3213E83F0DE0AD96");
 
-                    b.HasIndex("GrandParentId");
+                    b.HasIndex(new[] { "GrandParentId" }, "IX_modules_grand_parent_id");
 
-                    b.HasIndex("ParentId");
+                    b.HasIndex(new[] { "ParentId" }, "IX_modules_parent_id");
 
                     b.ToTable("modules", "fmis");
                 });
@@ -192,7 +196,7 @@ namespace GenericApi.Migrations
                     b.HasKey("Id")
                         .HasName("PK__module_p__3213E83F39BC6C4C");
 
-                    b.HasIndex("ModuleId");
+                    b.HasIndex(new[] { "ModuleId" }, "IX_module_permissions_module_id");
 
                     b.ToTable("module_permissions", "fmis");
                 });
@@ -230,8 +234,8 @@ namespace GenericApi.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("role_name");
 
-                    b.Property<int?>("RoleStatus")
-                        .HasColumnType("int")
+                    b.Property<bool?>("RoleStatus")
+                        .HasColumnType("bit")
                         .HasColumnName("role_status");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -248,7 +252,7 @@ namespace GenericApi.Migrations
                     b.ToTable("roles", "fmis");
                 });
 
-            modelBuilder.Entity("GenericApi.Models.RolePermission", b =>
+            modelBuilder.Entity("GenericApi.Models.RoleModulePermission", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -294,11 +298,11 @@ namespace GenericApi.Migrations
                     b.HasKey("Id")
                         .HasName("PK__role_per__3213E83FC80CA33C");
 
-                    b.HasIndex("PermissionId");
+                    b.HasIndex(new[] { "PermissionId" }, "IX_role_permissions_permission_id");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex(new[] { "RoleId" }, "IX_role_permissions_role_id");
 
-                    b.ToTable("role_permissions", "fmis");
+                    b.ToTable("role_module_permissions", "fmis");
                 });
 
             modelBuilder.Entity("GenericApi.Models.SecurityQuestion", b =>
@@ -408,10 +412,6 @@ namespace GenericApi.Migrations
                         .HasColumnType("nvarchar(255)")
                         .HasColumnName("password");
 
-                    b.Property<int?>("RoleId")
-                        .HasColumnType("int")
-                        .HasColumnName("role_id");
-
                     b.Property<int?>("StatusId")
                         .HasColumnType("int")
                         .HasColumnName("status_id");
@@ -427,12 +427,65 @@ namespace GenericApi.Migrations
                     b.HasKey("Id")
                         .HasName("PK__users__3213E83F79457AED");
 
-                    b.HasIndex("StatusId");
+                    b.HasIndex(new[] { "StatusId" }, "IX_users_status_id");
 
                     b.HasIndex(new[] { "Email" }, "UQ__users__AB6E6164B08C60EB")
                         .IsUnique();
 
                     b.ToTable("users", "fmis");
+                });
+
+            modelBuilder.Entity("GenericApi.Models.UserRole", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<int?>("DeletedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int")
+                        .HasColumnName("role_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("UpdatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("PK__user_rol__3213E83F4106E08B");
+
+                    b.HasIndex(new[] { "RoleId" }, "IX_user_roles_role_id");
+
+                    b.HasIndex(new[] { "UserId" }, "IX_user_roles_user_id");
+
+                    b.ToTable("user_roles", "fmis");
                 });
 
             modelBuilder.Entity("GenericApi.Models.UserSecurityQuestion", b =>
@@ -487,9 +540,9 @@ namespace GenericApi.Migrations
                     b.HasKey("Id")
                         .HasName("PK__user_sec__3213E83FDAD4F491");
 
-                    b.HasIndex("SecurityQuestionId");
+                    b.HasIndex(new[] { "SecurityQuestionId" }, "IX_user_security_questions_security_question_id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex(new[] { "UserId" }, "IX_user_security_questions_user_id");
 
                     b.ToTable("user_security_questions", "fmis");
                 });
@@ -503,8 +556,8 @@ namespace GenericApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AccessStatus")
-                        .HasColumnType("int")
+                    b.Property<bool?>("AccessStatus")
+                        .HasColumnType("bit")
                         .HasColumnName("access_status");
 
                     b.Property<DateTime?>("CreatedAt")
@@ -544,7 +597,7 @@ namespace GenericApi.Migrations
                     b.HasKey("Id")
                         .HasName("PK__user_spe__3213E83FFBD906A5");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex(new[] { "UserId" }, "IX_user_special_permissions_user_id");
 
                     b.ToTable("user_special_permissions", "fmis");
                 });
@@ -576,17 +629,17 @@ namespace GenericApi.Migrations
                     b.Navigation("Module");
                 });
 
-            modelBuilder.Entity("GenericApi.Models.RolePermission", b =>
+            modelBuilder.Entity("GenericApi.Models.RoleModulePermission", b =>
                 {
                     b.HasOne("GenericApi.Models.ModulePermission", "Permission")
-                        .WithMany("RolePermissions")
+                        .WithMany("RoleModulePermissions")
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_RolePermissions_Permissions");
 
                     b.HasOne("GenericApi.Models.Role", "Role")
-                        .WithMany("RolePermissions")
+                        .WithMany("RoleModulePermissions")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
@@ -605,6 +658,27 @@ namespace GenericApi.Migrations
                         .HasConstraintName("FK_Users_StatusKeyCategory");
 
                     b.Navigation("Status");
+                });
+
+            modelBuilder.Entity("GenericApi.Models.UserRole", b =>
+                {
+                    b.HasOne("GenericApi.Models.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_user_roles_role");
+
+                    b.HasOne("GenericApi.Models.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_user_roles_user");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("GenericApi.Models.UserSecurityQuestion", b =>
@@ -656,12 +730,14 @@ namespace GenericApi.Migrations
 
             modelBuilder.Entity("GenericApi.Models.ModulePermission", b =>
                 {
-                    b.Navigation("RolePermissions");
+                    b.Navigation("RoleModulePermissions");
                 });
 
             modelBuilder.Entity("GenericApi.Models.Role", b =>
                 {
-                    b.Navigation("RolePermissions");
+                    b.Navigation("RoleModulePermissions");
+
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("GenericApi.Models.SecurityQuestion", b =>
@@ -671,6 +747,8 @@ namespace GenericApi.Migrations
 
             modelBuilder.Entity("GenericApi.Models.User", b =>
                 {
+                    b.Navigation("UserRoles");
+
                     b.Navigation("UserSecurityQuestions");
 
                     b.Navigation("UserSpecialPermissions");
