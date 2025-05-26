@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -29,16 +30,26 @@ namespace GenericApi.Services.Auth
             )
             .CreateLogger();
 
-        public string GenerateAccessToken(User user)
+        public string GenerateAccessToken(UserJwtDto user)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
             var keyString = jwtSettings["Key"] ?? throw new Exception("JWT Key is missing");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "2");
+            var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15");
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
             // TODO: Every time an access token is generated, get the roles and list of permissions for the user from the database and add them to the claims.
+
+            var userDto = new UserJwtDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                MiddleName = user.MiddleName,
+                LastName = user.LastName,
+                // Add other properties as needed
+            };
 
             var claims = new List<Claim>
             {
@@ -48,7 +59,7 @@ namespace GenericApi.Services.Auth
                     JwtRegisteredClaimNames.Iat,
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
                 ),
-                new("user", System.Text.Json.JsonSerializer.Serialize(user)),
+                new("user", System.Text.Json.JsonSerializer.Serialize(userDto)),
             };
 
             var token = new JwtSecurityToken(
@@ -69,7 +80,7 @@ namespace GenericApi.Services.Auth
             var refreshToken = Convert.ToBase64String(randomBytes);
 
             var jwtSettings = _configuration.GetSection("Jwt");
-            var expiresDays = double.Parse(jwtSettings["RefreshTokenExpirationDays"] ?? "5");
+            var expiresDays = double.Parse(jwtSettings["RefreshTokenExpirationDays"] ?? "7");
 
             // save the refresh token in the database
             _context.RefreshTokens.Add(
