@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using GenericApi.Dtos.UserManagement;
 using GenericApi.Services.Auth;
 using GenericApi.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace GenericApi.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/v1/users")]
     public class UserManagementController : ControllerBase
     {
@@ -81,6 +83,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpGet("{userId}")]
+        [PermissionAuthorize("CanGetUserById")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Get user by ID.")]

@@ -47,7 +47,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("signup")]
-        [PermissionAuthorize("CanSignup")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User signup")]
@@ -55,7 +55,48 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // TODO: Implement the logic for user signup
+                var newUser = new SignupRequestDto
+                {
+                    Email = signupRequestDto.Email,
+                    Password = signupRequestDto.Password,
+                    ConfirmPassword = signupRequestDto.ConfirmPassword,
+                    FirstName = signupRequestDto.FirstName,
+                    MiddleName = signupRequestDto.MiddleName,
+                    LastName = signupRequestDto.LastName,
+                };
+
+                // Check if password and confirm password match
+                if (newUser.Password != newUser.ConfirmPassword)
+                {
+                    return _response.Error(
+                        statusCode: 400,
+                        e: new Exception("Password and Confirm Password do not match."),
+                        saveLog: true
+                    );
+                }
+
+                var saltRoundsStr = _configuration.GetSection("PasswordHashing")["SaltRounds"];
+                int saltRounds = int.TryParse(saltRoundsStr, out var rounds) ? rounds : 12; // fallback to 12
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(
+                    newUser.Password,
+                    workFactor: saltRounds
+                );
+
+                // save the new user to the database
+                var user = new User
+                {
+                    Email = newUser.Email,
+                    Password = hashedPassword,
+                    FirstName = newUser.FirstName,
+                    MiddleName = newUser.MiddleName,
+                    LastName = newUser.LastName,
+                    StatusId = 1,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+
+                _context.Users.Add(user);
+                _context.SaveChanges();
 
                 const string activity = "Your account has been created successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
@@ -65,7 +106,7 @@ namespace GenericApi.Controllers
                     activity: activity,
                     ip: ip,
                     message: activity,
-                    data: null
+                    data: newUser
                 );
             }
             catch (Exception ex)
@@ -116,9 +157,8 @@ namespace GenericApi.Controllers
                     );
                 }
 
-                // TODO: Implement password hashing and verification
-                // check if the password matches the stored password
-                if (user.Password != password)
+                var isValid = BCrypt.Net.BCrypt.Verify(password, user.Password);
+                if (!isValid)
                 {
                     return _response.Error(
                         statusCode: 401,
@@ -130,7 +170,7 @@ namespace GenericApi.Controllers
                 // Generate Tokens
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                var userAgent = Request.Headers["User-Agent"].ToString();
+                var userAgent = Request.Headers.UserAgent.ToString();
                 if (string.IsNullOrEmpty(userAgent))
                 {
                     userAgent = "Unknown User Agent";
@@ -169,7 +209,7 @@ namespace GenericApi.Controllers
                     activity: activity,
                     ip: ip,
                     message: activity,
-                    data: null
+                    data: new { token = accessToken }
                 );
             }
             catch (Exception ex)
@@ -225,6 +265,10 @@ namespace GenericApi.Controllers
                 var token = _context.RefreshTokens.FirstOrDefault(rt => rt.Token == refreshToken);
                 if (token == null || token.ExpiresAt < DateTime.UtcNow)
                 {
+                    // remove both tokens
+                    Response.Cookies.Delete("refreshToken");
+                    Response.Cookies.Delete("accessToken");
+
                     return _response.Error(
                         statusCode: 401,
                         e: new Exception("Invalid or expired refresh token."),
@@ -235,6 +279,10 @@ namespace GenericApi.Controllers
                 // Check if token has revoked_at
                 if (token.RevokedAt.HasValue)
                 {
+                    // remove both tokens from cookies
+                    Response.Cookies.Delete("refreshToken");
+                    Response.Cookies.Delete("accessToken");
+
                     return _response.Error(
                         statusCode: 401,
                         e: new Exception("Refresh token has been revoked."),
@@ -271,7 +319,11 @@ namespace GenericApi.Controllers
 
                 const string activity = "Access token has been refreshed successfully.";
 
-                return _response.Success(statusCode: 200, message: activity, data: null);
+                return _response.Success(
+                    statusCode: 200,
+                    message: activity,
+                    data: new { token = accessToken }
+                );
             }
             catch (Exception ex)
             {
