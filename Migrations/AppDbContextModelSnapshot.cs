@@ -198,6 +198,73 @@ namespace GenericApi.Migrations
                     b.ToTable("module_permissions", "fmis");
                 });
 
+            modelBuilder.Entity("GenericApi.Models.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<bool?>("IsRevoked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_revoked");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("RevokedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("revoked_by");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("token");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("user_agent");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("PK__refresh___3213E83FB6BA19AF");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("refresh_tokens", "fmis");
+                });
+
             modelBuilder.Entity("GenericApi.Models.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -626,6 +693,18 @@ namespace GenericApi.Migrations
                     b.Navigation("Module");
                 });
 
+            modelBuilder.Entity("GenericApi.Models.RefreshToken", b =>
+                {
+                    b.HasOne("GenericApi.Models.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_RefreshTokens_Users");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("GenericApi.Models.RoleModulePermission", b =>
                 {
                     b.HasOne("GenericApi.Models.ModulePermission", "Permission")
@@ -744,6 +823,8 @@ namespace GenericApi.Migrations
 
             modelBuilder.Entity("GenericApi.Models.User", b =>
                 {
+                    b.Navigation("RefreshTokens");
+
                     b.Navigation("UserRoles");
 
                     b.Navigation("UserSecurityQuestions");

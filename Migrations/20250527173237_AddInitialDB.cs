@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GenericApi.Migrations
 {
     /// <inheritdoc />
-    public partial class AddedInitialDB : Migration
+    public partial class AddInitialDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -258,6 +258,67 @@ namespace GenericApi.Migrations
             );
 
             migrationBuilder.CreateTable(
+                name: "refresh_tokens",
+                schema: "fmis",
+                columns: table => new
+                {
+                    id = table
+                        .Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    user_id = table.Column<int>(type: "int", nullable: false),
+                    token = table.Column<string>(
+                        type: "nvarchar(500)",
+                        maxLength: 500,
+                        nullable: false
+                    ),
+                    user_agent = table.Column<string>(
+                        type: "nvarchar(255)",
+                        maxLength: 255,
+                        nullable: true
+                    ),
+                    ip_address = table.Column<string>(
+                        type: "nvarchar(50)",
+                        maxLength: 50,
+                        nullable: true
+                    ),
+                    is_revoked = table.Column<bool>(
+                        type: "bit",
+                        nullable: true,
+                        defaultValue: false
+                    ),
+                    expires_at = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    created_at = table.Column<DateTime>(
+                        type: "datetime2",
+                        nullable: true,
+                        defaultValueSql: "(getutcdate())"
+                    ),
+                    created_by = table.Column<string>(
+                        type: "nvarchar(100)",
+                        maxLength: 100,
+                        nullable: true
+                    ),
+                    revoked_at = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    revoked_by = table.Column<string>(
+                        type: "nvarchar(100)",
+                        maxLength: 100,
+                        nullable: true
+                    ),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__refresh___3213E83FB6BA19AF", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_Users",
+                        column: x => x.user_id,
+                        principalSchema: "fmis",
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
+
+            migrationBuilder.CreateTable(
                 name: "user_roles",
                 schema: "fmis",
                 columns: table => new
@@ -449,6 +510,13 @@ namespace GenericApi.Migrations
             );
 
             migrationBuilder.CreateIndex(
+                name: "IX_refresh_tokens_user_id",
+                schema: "fmis",
+                table: "refresh_tokens",
+                column: "user_id"
+            );
+
+            migrationBuilder.CreateIndex(
                 name: "IX_role_permissions_permission_id",
                 schema: "fmis",
                 table: "role_module_permissions",
@@ -516,6 +584,8 @@ namespace GenericApi.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(name: "refresh_tokens", schema: "fmis");
+
             migrationBuilder.DropTable(name: "role_module_permissions", schema: "fmis");
 
             migrationBuilder.DropTable(name: "user_roles", schema: "fmis");
