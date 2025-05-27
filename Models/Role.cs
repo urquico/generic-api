@@ -9,7 +9,7 @@ public partial class Role
 
     public string RoleName { get; set; } = null!;
 
-    public int? RoleStatus { get; set; }
+    public bool? RoleStatus { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
@@ -23,5 +23,8 @@ public partial class Role
 
     public int? DeletedBy { get; set; }
 
-    public virtual ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+    public virtual ICollection<RoleModulePermission> RoleModulePermissions { get; set; } =
+        new List<RoleModulePermission>();
+
+    public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }

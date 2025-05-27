@@ -25,13 +25,16 @@ public partial class Module
 
     public int? DeletedBy { get; set; }
 
+    public bool? ModuleStatus { get; set; }
+
     public virtual Module? GrandParent { get; set; }
 
     public virtual ICollection<Module> InverseGrandParent { get; set; } = new List<Module>();
 
     public virtual ICollection<Module> InverseParent { get; set; } = new List<Module>();
 
-    public virtual ICollection<ModulePermission> ModulePermissions { get; set; } = new List<ModulePermission>();
+    public virtual ICollection<ModulePermission> ModulePermissions { get; set; } =
+        new List<ModulePermission>();
 
     public virtual Module? Parent { get; set; }
 }

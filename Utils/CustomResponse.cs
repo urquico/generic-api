@@ -22,7 +22,7 @@ namespace GenericApi.Utils
 
         public ObjectResult Success(
             int statusCode,
-            string activity,
+            string activity = "",
             string? ip = null,
             string? message = null,
             object? data = null

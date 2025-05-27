@@ -6,8 +6,11 @@
   "words": [
     "appsettings",
     "Dtos",
+    "Hmac",
     "mwss",
     "Serilog",
+    "simplevia",
+    "SQLEXPRESS",
     "Swashbuckle"
   ],
   "ignoreWords": [],

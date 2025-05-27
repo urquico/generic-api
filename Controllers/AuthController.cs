@@ -1,19 +1,32 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
+using GenericApi.Models;
+using GenericApi.Services.Auth;
 using GenericApi.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using UAParser;
 
 namespace GenericApi.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/v1/auth")]
-    public class AuthController : ControllerBase
+    [SwaggerTag("Authentication and Authorization")]
+    public class AuthController(TokenService tokenService, IConfiguration configuration)
+        : ControllerBase
     {
         private readonly CustomSuccess _response = new();
+
+        private readonly TokenService _tokenService = tokenService;
+
+        private readonly AppDbContext _context = new();
+        private readonly IConfiguration _configuration = configuration;
 
         /**
          * Signup endpoint allows a new user to register.
@@ -34,6 +47,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("signup")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User signup")]
@@ -41,7 +55,48 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // TODO: Implement the logic for user signup
+                var newUser = new SignupRequestDto
+                {
+                    Email = signupRequestDto.Email,
+                    Password = signupRequestDto.Password,
+                    ConfirmPassword = signupRequestDto.ConfirmPassword,
+                    FirstName = signupRequestDto.FirstName,
+                    MiddleName = signupRequestDto.MiddleName,
+                    LastName = signupRequestDto.LastName,
+                };
+
+                // Check if password and confirm password match
+                if (newUser.Password != newUser.ConfirmPassword)
+                {
+                    return _response.Error(
+                        statusCode: 400,
+                        e: new Exception("Password and Confirm Password do not match."),
+                        saveLog: true
+                    );
+                }
+
+                var saltRoundsStr = _configuration.GetSection("PasswordHashing")["SaltRounds"];
+                int saltRounds = int.TryParse(saltRoundsStr, out var rounds) ? rounds : 12; // fallback to 12
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(
+                    newUser.Password,
+                    workFactor: saltRounds
+                );
+
+                // save the new user to the database
+                var user = new User
+                {
+                    Email = newUser.Email,
+                    Password = hashedPassword,
+                    FirstName = newUser.FirstName,
+                    MiddleName = newUser.MiddleName,
+                    LastName = newUser.LastName,
+                    StatusId = 1,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+
+                _context.Users.Add(user);
+                _context.SaveChanges();
 
                 const string activity = "Your account has been created successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
@@ -51,7 +106,7 @@ namespace GenericApi.Controllers
                     activity: activity,
                     ip: ip,
                     message: activity,
-                    data: null
+                    data: newUser
                 );
             }
             catch (Exception ex)
@@ -79,6 +134,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("login")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User login")]
@@ -86,17 +142,187 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // TODO: Implement the logic for user login
+                // validate the user credentials
+                var email = loginRequestDto.Email;
+                var password = loginRequestDto.Password;
+
+                var user = _context.Users.FirstOrDefault(u => u.Email == email);
+
+                if (user == null)
+                {
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Invalid email."),
+                        saveLog: true
+                    );
+                }
+
+                var isValid = BCrypt.Net.BCrypt.Verify(password, user.Password);
+                if (!isValid)
+                {
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Invalid password."),
+                        saveLog: true
+                    );
+                }
+
+                // Generate Tokens
+                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+
+                var userAgent = Request.Headers.UserAgent.ToString();
+                if (string.IsNullOrEmpty(userAgent))
+                {
+                    userAgent = "Unknown User Agent";
+                }
+
+                var uaParser = Parser.GetDefault();
+                ClientInfo clientInfo = uaParser.Parse(userAgent);
+
+                string browser = clientInfo.UA.Family;
+                string os = clientInfo.OS.Family;
+                string device = clientInfo.Device.Family;
+
+                string agentName = $"{browser} on {os} ({device})";
+
+                var userDto = new UserJwtDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    MiddleName = user.MiddleName,
+                    LastName = user.LastName,
+                    // Add other properties as needed
+                };
+
+                var accessToken = _tokenService.GenerateAccessToken(userDto);
+                var refreshToken = _tokenService.GenerateRefreshToken(user.Id, agentName, ip);
+
+                // Set tokens as HttpOnly cookies
+                SetRefreshAuthCookies(refreshToken);
+                SetAccessAuthCookies(accessToken);
 
                 const string activity = "You have successfully logged in.";
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
                     statusCode: 200,
                     activity: activity,
                     ip: ip,
                     message: activity,
-                    data: null
+                    data: new { token = accessToken }
+                );
+            }
+            catch (Exception ex)
+            {
+                return _response.Error(statusCode: 500, e: ex);
+            }
+        }
+
+        // POST: refresh
+        /**
+         * Refresh endpoint allows an authenticated user to refresh their access token using a valid refresh token.
+         *
+         * @returns {IActionResult} 200 if refresh is successful, 401 if the refresh token is invalid, 500 if an error occurred.
+         * @route POST /refresh
+         * @example response - 200 - Token refreshed successfully
+         * {
+         *   "statusCode": 200,
+         *   "message": "Access token has been refreshed successfully.",
+         *   "data": null
+         * }
+         * @example response - 401 - Invalid refresh token
+         * {
+         *   "statusCode": 401,
+         *   "error": "Invalid refresh token."
+         * }
+         * @example response - 500 - Error
+         * {
+         *   "statusCode": 500,
+         *   "error": "An error occurred during token refresh."
+         * }
+        */
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(void), 200)]
+        [ProducesResponseType(typeof(object), 401)]
+        [ProducesResponseType(typeof(object), 500)]
+        [SwaggerOperation(Summary = "Refresh access token")]
+        public IActionResult Refresh()
+        {
+            try
+            {
+                // Get the refresh token from the cookies
+                if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
+                {
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Refresh token is missing."),
+                        saveLog: true
+                    );
+                }
+
+                // Validate the refresh token
+                var token = _context.RefreshTokens.FirstOrDefault(rt => rt.Token == refreshToken);
+                if (token == null || token.ExpiresAt < DateTime.UtcNow)
+                {
+                    // remove both tokens
+                    Response.Cookies.Delete("refreshToken");
+                    Response.Cookies.Delete("accessToken");
+
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Invalid or expired refresh token."),
+                        saveLog: true
+                    );
+                }
+
+                // Check if token has revoked_at
+                if (token.RevokedAt.HasValue)
+                {
+                    // remove both tokens from cookies
+                    Response.Cookies.Delete("refreshToken");
+                    Response.Cookies.Delete("accessToken");
+
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("Refresh token has been revoked."),
+                        saveLog: true
+                    );
+                }
+
+                // Generate a new access token
+                var user = _context.Users.Find(token.UserId);
+                if (user == null)
+                {
+                    return _response.Error(
+                        statusCode: 401,
+                        e: new Exception("User not found."),
+                        saveLog: true
+                    );
+                }
+
+                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+
+                var userDto = new UserJwtDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    MiddleName = user.MiddleName,
+                    LastName = user.LastName,
+                    // Add other properties as needed
+                };
+                var accessToken = _tokenService.GenerateAccessToken(userDto);
+
+                // Set the new access token as an HttpOnly cookie
+                SetAccessAuthCookies(accessToken);
+
+                const string activity = "Access token has been refreshed successfully.";
+
+                return _response.Success(
+                    statusCode: 200,
+                    message: activity,
+                    data: new { token = accessToken }
                 );
             }
             catch (Exception ex)
@@ -123,6 +349,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpPost("logout")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "User logout")]
@@ -130,7 +357,34 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // TODO: Implement the logic for user logout
+                // revoke the refresh token and clear the cookies
+                if (Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
+                {
+                    var token = _context.RefreshTokens.FirstOrDefault(rt =>
+                        rt.Token == refreshToken
+                    );
+                    if (token == null)
+                    {
+                        Response.Cookies.Delete("refreshToken");
+                        return _response.Error(
+                            statusCode: 401,
+                            e: new Exception("Invalid Token."),
+                            saveLog: true
+                        );
+                    }
+                    else
+                    {
+                        // Mark the token as revoked
+                        token.RevokedAt = DateTime.UtcNow;
+                        token.RevokedBy = token.UserId.ToString();
+                        _context.RefreshTokens.Update(token);
+                        _context.SaveChanges();
+                    }
+
+                    // clear the cookies
+                    Response.Cookies.Delete("refreshToken");
+                    Response.Cookies.Delete("accessToken");
+                }
 
                 const string activity = "You have successfully logged out.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
@@ -147,6 +401,42 @@ namespace GenericApi.Controllers
             {
                 return _response.Error(statusCode: 500, e: ex);
             }
+        }
+
+        private void SetRefreshAuthCookies(string refreshToken)
+        {
+            var expiration = _configuration.GetSection("Jwt")["RefreshTokenExpirationDays"] ?? "7";
+
+            Response.Cookies.Append(
+                "refreshToken",
+                refreshToken,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // Set to true in production (requires HTTPS)
+                    SameSite = SameSiteMode.Strict,
+                    // TODO: Change AddMinutes to AddDays for refresh token expiration after testing
+                    Expires = DateTimeOffset.UtcNow.AddMinutes(double.Parse(expiration)),
+                }
+            );
+        }
+
+        private void SetAccessAuthCookies(string accessToken)
+        {
+            var expiration =
+                _configuration.GetSection("Jwt")["AccessTokenExpirationMinutes"] ?? "15";
+
+            Response.Cookies.Append(
+                "accessToken",
+                accessToken,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // Set to true in production (requires HTTPS)
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddMinutes(double.Parse(expiration)),
+                }
+            );
         }
     }
 }
