@@ -7,6 +7,7 @@ using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Utils;
+using GenericApi.Utils.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -55,22 +56,25 @@ namespace GenericApi.Controllers
         {
             try
             {
-                var newUser = new SignupRequestDto
-                {
-                    Email = signupRequestDto.Email,
-                    Password = signupRequestDto.Password,
-                    ConfirmPassword = signupRequestDto.ConfirmPassword,
-                    FirstName = signupRequestDto.FirstName,
-                    MiddleName = signupRequestDto.MiddleName,
-                    LastName = signupRequestDto.LastName,
-                };
-
-                // Check if password and confirm password match
-                if (newUser.Password != newUser.ConfirmPassword)
+                // Check if the email already exists
+                var existingUser = _context.Users.FirstOrDefault(u =>
+                    u.Email == signupRequestDto.Email
+                );
+                if (existingUser != null)
                 {
                     return _response.Error(
                         statusCode: 400,
-                        e: new Exception("Password and Confirm Password do not match."),
+                        e: new Exception(AuthMessage.EMAIL_ALREADY_EXISTS),
+                        saveLog: true
+                    );
+                }
+
+                // Check if password and confirm password match
+                if (signupRequestDto.Password != signupRequestDto.ConfirmPassword)
+                {
+                    return _response.Error(
+                        statusCode: 400,
+                        e: new Exception(AuthMessage.PASSWORD_CONFIRMATION_MISMATCH),
                         saveLog: true
                     );
                 }
@@ -78,35 +82,41 @@ namespace GenericApi.Controllers
                 var saltRoundsStr = _configuration.GetSection("PasswordHashing")["SaltRounds"];
                 int saltRounds = int.TryParse(saltRoundsStr, out var rounds) ? rounds : 12; // fallback to 12
                 var hashedPassword = BCrypt.Net.BCrypt.HashPassword(
-                    newUser.Password,
+                    signupRequestDto.Password,
                     workFactor: saltRounds
                 );
 
                 // save the new user to the database
-                var user = new User
-                {
-                    Email = newUser.Email,
-                    Password = hashedPassword,
-                    FirstName = newUser.FirstName,
-                    MiddleName = newUser.MiddleName,
-                    LastName = newUser.LastName,
-                    StatusId = 1,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                };
+                _context.Users.Add(
+                    new User
+                    {
+                        Email = signupRequestDto.Email,
+                        Password = hashedPassword,
+                        FirstName = signupRequestDto.FirstName,
+                        MiddleName = signupRequestDto.MiddleName,
+                        LastName = signupRequestDto.LastName,
+                        StatusId = 1,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    }
+                );
 
-                _context.Users.Add(user);
                 _context.SaveChanges();
 
-                const string activity = "Your account has been created successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
                     statusCode: 200,
-                    activity: activity,
+                    activity: AuthMessage.SIGNUP_ACTIVITY_LOG + signupRequestDto.Email,
                     ip: ip,
-                    message: activity,
-                    data: newUser
+                    message: AuthMessage.SUCCESS_SIGNUP,
+                    data: new SignupResponseDto
+                    {
+                        Email = signupRequestDto.Email,
+                        FirstName = signupRequestDto.FirstName,
+                        MiddleName = signupRequestDto.MiddleName,
+                        LastName = signupRequestDto.LastName,
+                    }
                 );
             }
             catch (Exception ex)
