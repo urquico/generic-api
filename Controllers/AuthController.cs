@@ -8,6 +8,7 @@ using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
+using GenericApi.Utils.SwaggerSummary;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -35,23 +36,13 @@ namespace GenericApi.Controllers
          * @param signupRequestDto The request body containing user signup information.
          * @returns {IActionResult} 200 if signup is successful, 500 if an error occurred.
          * @route POST /signup
-         * @example response - 200 - User signup successful
-         * {
-         *   "statusCode": 200,
-         *   "message": "User signup has been successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred during signup."
-         * }
         */
         [HttpPost("signup")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "User signup")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = AuthSummary.SIGNUP)]
         public IActionResult Signup([FromBody] SignupRequestDto signupRequestDto)
         {
             try
@@ -63,8 +54,8 @@ namespace GenericApi.Controllers
                 if (existingUser != null)
                 {
                     return _response.Error(
-                        statusCode: 400,
-                        e: new Exception(AuthMessage.EMAIL_ALREADY_EXISTS),
+                        statusCode: StatusCodes.Status400BadRequest,
+                        e: new Exception(SignupMessages.EMAIL_ALREADY_EXISTS),
                         saveLog: true
                     );
                 }
@@ -73,8 +64,8 @@ namespace GenericApi.Controllers
                 if (signupRequestDto.Password != signupRequestDto.ConfirmPassword)
                 {
                     return _response.Error(
-                        statusCode: 400,
-                        e: new Exception(AuthMessage.PASSWORD_CONFIRMATION_MISMATCH),
+                        statusCode: StatusCodes.Status400BadRequest,
+                        e: new Exception(SignupMessages.PASSWORD_CONFIRMATION_MISMATCH),
                         saveLog: true
                     );
                 }
@@ -106,10 +97,13 @@ namespace GenericApi.Controllers
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: AuthMessage.SIGNUP_ACTIVITY_LOG + signupRequestDto.Email,
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(
+                        SignupMessages.SIGNUP_ACTIVITY_LOG,
+                        signupRequestDto.Email
+                    ),
                     ip: ip,
-                    message: AuthMessage.SUCCESS_SIGNUP,
+                    message: SignupMessages.SUCCESS_SIGNUP,
                     data: new SignupResponseDto
                     {
                         Email = signupRequestDto.Email,
@@ -121,7 +115,7 @@ namespace GenericApi.Controllers
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
@@ -129,55 +123,42 @@ namespace GenericApi.Controllers
          * Login endpoint allows a user to authenticate and receive an access token.
          *
          * @param loginRequestDto The request body containing user login credentials.
-         * @returns {IActionResult} 200 if login is successful, 500 if an error occurred.
+         * @returns {IActionResult} 200 if login is successful, 400 if email not found or password is invalid, 401 if unauthorized, 500 if an error occurred.
          * @route POST /login
-         * @example response - 200 - User login successful
-         * {
-         *   "statusCode": 200,
-         *   "message": "You have successfully logged in.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred during login."
-         * }
         */
         [HttpPost("login")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "User login")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = AuthSummary.LOGIN)]
         public IActionResult Login([FromBody] LoginRequestDto loginRequestDto)
         {
             try
             {
-                // validate the user credentials
-                var email = loginRequestDto.Email;
-                var password = loginRequestDto.Password;
-
-                var user = _context.Users.FirstOrDefault(u => u.Email == email);
-
+                // Check if the email is existing
+                var user = _context.Users.FirstOrDefault(u => u.Email == loginRequestDto.Email);
                 if (user == null)
                 {
                     return _response.Error(
-                        statusCode: 401,
-                        e: new Exception("Invalid email."),
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(LoginMessage.EMAIL_NOT_FOUND),
                         saveLog: true
                     );
                 }
 
-                var isValid = BCrypt.Net.BCrypt.Verify(password, user.Password);
+                // Check if the user password is correct
+                var isValid = BCrypt.Net.BCrypt.Verify(loginRequestDto.Password, user.Password);
                 if (!isValid)
                 {
                     return _response.Error(
-                        statusCode: 401,
-                        e: new Exception("Invalid password."),
+                        statusCode: StatusCodes.Status401Unauthorized,
+                        e: new Exception(LoginMessage.INVALID_PASSWORD),
                         saveLog: true
                     );
                 }
 
-                // Generate Tokens
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 var userAgent = Request.Headers.UserAgent.ToString();
@@ -212,19 +193,17 @@ namespace GenericApi.Controllers
                 SetRefreshAuthCookies(refreshToken);
                 SetAccessAuthCookies(accessToken);
 
-                const string activity = "You have successfully logged in.";
-
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(LoginMessage.LOGIN_ACTIVITY_LOG, loginRequestDto.Email),
                     ip: ip,
-                    message: activity,
+                    message: LoginMessage.SUCCESS_LOGIN,
                     data: new { token = accessToken }
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
@@ -253,10 +232,10 @@ namespace GenericApi.Controllers
         */
         [HttpPost("refresh")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 401)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Refresh access token")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = AuthSummary.REFRESH)]
         public IActionResult Refresh()
         {
             try
@@ -265,7 +244,7 @@ namespace GenericApi.Controllers
                 if (!Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
                 {
                     return _response.Error(
-                        statusCode: 401,
+                        statusCode: StatusCodes.Status401Unauthorized,
                         e: new Exception("Refresh token is missing."),
                         saveLog: true
                     );
@@ -362,7 +341,7 @@ namespace GenericApi.Controllers
         [AllowAnonymous]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "User logout")]
+        [SwaggerOperation(Summary = AuthSummary.LOGOUT)]
         public IActionResult Logout()
         {
             try
@@ -423,7 +402,7 @@ namespace GenericApi.Controllers
                 new CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = false, // Set to true in production (requires HTTPS)
+                    Secure = false, // TODO: Set to true in production (requires HTTPS)
                     SameSite = SameSiteMode.Strict,
                     // TODO: Change AddMinutes to AddDays for refresh token expiration after testing
                     Expires = DateTimeOffset.UtcNow.AddMinutes(double.Parse(expiration)),
@@ -442,7 +421,7 @@ namespace GenericApi.Controllers
                 new CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = false, // Set to true in production (requires HTTPS)
+                    Secure = false, // TODO: Set to true in production (requires HTTPS)
                     SameSite = SameSiteMode.Strict,
                     Expires = DateTimeOffset.UtcNow.AddMinutes(double.Parse(expiration)),
                 }

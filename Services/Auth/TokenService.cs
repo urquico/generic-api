@@ -41,17 +41,15 @@ namespace GenericApi.Services.Auth
 
             // TODO: Every time an access token is generated, get the roles and list of permissions for the user from the database and add them to the claims.
 
-            var userDto = new UserJwtDto
+            var testPermissions = new List<string>
             {
-                Id = user.Id,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                MiddleName = user.MiddleName,
-                LastName = user.LastName,
-                // Add other properties as needed
+                "UserManagement.GetAllUsers",
+                "UserManagement.CreateUser",
+                "UserManagement.UpdateUser",
+                "UserManagement.DeleteUser",
             };
 
-            var testPermissions = new List<string> { "UserManagement.GetAllUsers" };
+            var testRoles = new List<string> { "Admin", "User", "Manager" };
 
             var claims = new List<Claim>
             {
@@ -61,11 +59,15 @@ namespace GenericApi.Services.Auth
                     JwtRegisteredClaimNames.Iat,
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
                 ),
-                new("user", System.Text.Json.JsonSerializer.Serialize(userDto)),
-                // Add roles and permissions claims
-                // TODO: Insert roles and permissions dynamically from the database
-                new(ClaimTypes.Role, "Admin"),
+                new("user", System.Text.Json.JsonSerializer.Serialize(user)),
             };
+
+            // TODO: Insert roles and permissions dynamically from the database
+            // persisting roles in the claims
+            foreach (var role in testRoles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             // persisting permissions in the claims
             foreach (var permission in testPermissions)

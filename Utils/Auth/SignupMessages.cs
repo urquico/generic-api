@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace GenericApi.Utils.Auth
 {
-    public class AuthMessage
+    public class SignupMessages
     {
         public const string EMAIL_ALREADY_EXISTS =
             "Email already exists. Please use a different email address.";
