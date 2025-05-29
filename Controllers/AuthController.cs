@@ -213,22 +213,6 @@ namespace GenericApi.Controllers
          *
          * @returns {IActionResult} 200 if refresh is successful, 401 if the refresh token is invalid, 500 if an error occurred.
          * @route POST /refresh
-         * @example response - 200 - Token refreshed successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "Access token has been refreshed successfully.",
-         *   "data": null
-         * }
-         * @example response - 401 - Invalid refresh token
-         * {
-         *   "statusCode": 401,
-         *   "error": "Invalid refresh token."
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred during token refresh."
-         * }
         */
         [HttpPost("refresh")]
         [AllowAnonymous]
@@ -245,7 +229,7 @@ namespace GenericApi.Controllers
                 {
                     return _response.Error(
                         statusCode: StatusCodes.Status401Unauthorized,
-                        e: new Exception("Refresh token is missing."),
+                        e: new Exception(RefreshMessages.MISSING_TOKEN),
                         saveLog: true
                     );
                 }
@@ -259,8 +243,8 @@ namespace GenericApi.Controllers
                     Response.Cookies.Delete("accessToken");
 
                     return _response.Error(
-                        statusCode: 401,
-                        e: new Exception("Invalid or expired refresh token."),
+                        statusCode: StatusCodes.Status401Unauthorized,
+                        e: new Exception(RefreshMessages.INVALID_TOKEN),
                         saveLog: true
                     );
                 }
@@ -273,8 +257,8 @@ namespace GenericApi.Controllers
                     Response.Cookies.Delete("accessToken");
 
                     return _response.Error(
-                        statusCode: 401,
-                        e: new Exception("Refresh token has been revoked."),
+                        statusCode: StatusCodes.Status401Unauthorized,
+                        e: new Exception(RefreshMessages.REVOKED_TOKEN),
                         saveLog: true
                     );
                 }
@@ -284,8 +268,8 @@ namespace GenericApi.Controllers
                 if (user == null)
                 {
                     return _response.Error(
-                        statusCode: 401,
-                        e: new Exception("User not found."),
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(RefreshMessages.USER_NOT_FOUND),
                         saveLog: true
                     );
                 }
@@ -306,17 +290,15 @@ namespace GenericApi.Controllers
                 // Set the new access token as an HttpOnly cookie
                 SetAccessAuthCookies(accessToken);
 
-                const string activity = "Access token has been refreshed successfully.";
-
                 return _response.Success(
-                    statusCode: 200,
-                    message: activity,
+                    statusCode: StatusCodes.Status200OK,
+                    message: RefreshMessages.SUCCESS,
                     data: new { token = accessToken }
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
@@ -325,22 +307,12 @@ namespace GenericApi.Controllers
          *
          * @returns {IActionResult} 200 if logout is successful, 500 if an error occurred.
          * @route POST /logout
-         * @example response - 200 - User logout successful
-         * {
-         *   "statusCode": 200,
-         *   "message": "You have successfully logged out.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred during logout."
-         * }
         */
         [HttpPost("logout")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = AuthSummary.LOGOUT)]
         public IActionResult Logout()
         {
@@ -356,8 +328,8 @@ namespace GenericApi.Controllers
                     {
                         Response.Cookies.Delete("refreshToken");
                         return _response.Error(
-                            statusCode: 401,
-                            e: new Exception("Invalid Token."),
+                            statusCode: StatusCodes.Status401Unauthorized,
+                            e: new Exception(LogoutMessages.MISSING_TOKEN),
                             saveLog: true
                         );
                     }
@@ -375,20 +347,19 @@ namespace GenericApi.Controllers
                     Response.Cookies.Delete("accessToken");
                 }
 
-                const string activity = "You have successfully logged out.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                    statusCode: StatusCodes.Status200OK,
+                    activity: LogoutMessages.ACTIVITY_LOG,
                     ip: ip,
-                    message: activity,
+                    message: LogoutMessages.SUCCESS,
                     data: null
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
