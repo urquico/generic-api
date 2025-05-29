@@ -179,7 +179,7 @@ namespace GenericApi.Controllers
                     // Add other properties as needed
                 };
 
-                var accessToken = _tokenService.GenerateAccessToken(userDto);
+                var (accessToken, permissions) = _tokenService.GenerateAccessToken(userDto);
                 var refreshToken = _tokenService.GenerateRefreshToken(user.Id, agentName, ip);
 
                 // Set tokens as HttpOnly cookies
@@ -191,7 +191,7 @@ namespace GenericApi.Controllers
                     activity: string.Format(LoginMessage.LOGIN_ACTIVITY_LOG, loginRequestDto.Email),
                     ip: ip,
                     message: LoginMessage.SUCCESS_LOGIN,
-                    data: new { token = accessToken }
+                    data: new { permissions }
                 );
             }
             catch (Exception ex)
@@ -278,7 +278,7 @@ namespace GenericApi.Controllers
                     LastName = user.LastName,
                     // Add other properties as needed
                 };
-                var accessToken = _tokenService.GenerateAccessToken(userDto);
+                var (accessToken, permissions) = _tokenService.GenerateAccessToken(userDto);
 
                 // Set the new access token as an HttpOnly cookie
                 SetAccessAuthCookies(accessToken);
@@ -286,7 +286,7 @@ namespace GenericApi.Controllers
                 return _response.Success(
                     statusCode: StatusCodes.Status200OK,
                     message: RefreshMessages.SUCCESS,
-                    data: new { token = accessToken }
+                    data: new { permissions }
                 );
             }
             catch (Exception ex)

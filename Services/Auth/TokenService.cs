@@ -30,7 +30,9 @@ namespace GenericApi.Services.Auth
             )
             .CreateLogger();
 
-        public string GenerateAccessToken(UserJwtDto user)
+        public record TokenResult(string Token, List<string> Permissions);
+
+        public TokenResult GenerateAccessToken(UserJwtDto user)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
             var keyString = jwtSettings["Key"] ?? throw new Exception("JWT Key is missing");
@@ -83,7 +85,10 @@ namespace GenericApi.Services.Auth
                 signingCredentials: creds
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return new TokenResult(
+                new JwtSecurityTokenHandler().WriteToken(token),
+                testPermissions
+            );
         }
 
         public string GenerateRefreshToken(int userId, string userAgent, string? ipAddress = null)
