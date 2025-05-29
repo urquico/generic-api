@@ -1,5 +1,6 @@
 using System.Text;
 using GenericApi.Models;
+using GenericApi.Seed;
 using GenericApi.Services.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -100,5 +101,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+if (args.Contains("--seed"))
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var keyCategorySeeder = new KeyCategoriesSeed(dbContext);
+        var accountSeeder = new AccountsSeed(dbContext, app.Configuration);
+        var modulesSeeder = new ModulesSeeder(dbContext);
+
+        keyCategorySeeder.Seed();
+        accountSeeder.Seed();
+
+        modulesSeeder.Seed();
+    }
+    return;
+}
 
 app.Run();
