@@ -107,8 +107,12 @@ if (args.Contains("--seed"))
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var seeder = new AccountsSeed(dbContext);
-        seeder.Seed();
+
+        var keyCategorySeeder = new KeyCategoriesSeed(dbContext);
+        var accountSeeder = new AccountsSeed(dbContext, app.Configuration);
+
+        keyCategorySeeder.Seed();
+        accountSeeder.Seed();
     }
     return;
 }
