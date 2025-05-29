@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
@@ -24,9 +19,7 @@ namespace GenericApi.Controllers
         : ControllerBase
     {
         private readonly CustomSuccess _response = new();
-
         private readonly TokenService _tokenService = tokenService;
-
         private readonly AppDbContext _context = new();
         private readonly IConfiguration _configuration = configuration;
 
