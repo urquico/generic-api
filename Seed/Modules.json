@@ -1,0 +1,171 @@
+[
+  {
+    "ModuleName": "Dashboard",
+    "Permissions": ["Dashboard.CanViewDashboard", "Dashboard.CanExportDashboardData"]
+  },
+  {
+    "ModuleName": "Income Management",
+    "SubModule": [
+      {
+        "ModuleName": "Lease Management",
+        "SubModule": [
+          {
+            "ModuleName": "Dashboard",
+            "Permissions": [
+              "LeaseManagement.CanViewDashboard",
+              "LeaseManagement.CanExportDashboardData"
+            ]
+          },
+          {
+            "ModuleName": "Billing Management",
+            "Permissions": [
+              "LeaseManagement.CanCreateSOA",
+              "LeaseManagement.CanViewSOA",
+              "LeaseManagement.CanExportSOA",
+
+              "LeaseManagement.CanCreateBS",
+              "LeaseManagement.CanViewBS",
+              "LeaseManagement.CanEditBS",
+              "LeaseManagement.CanViewBillingActivity",
+              "LeaseManagement.CanExportBS",
+
+              "LeaseManagement.CanCreateDTP",
+              "LeaseManagement.CanViewDTP",
+              "LeaseManagement.CanExportDTP",
+
+              "LeaseManagement.CanViewJEV",
+              "LeaseManagement.CanExportJEV"
+            ]
+          },
+          {
+            "ModuleName": "Payment Monitoring",
+            "Permissions": [
+              "LeaseManagement.CanPostPayment",
+              "LeaseManagement.CanViewPaymentHistory",
+              "LeaseManagement.CanViewPaymentReminder"
+            ]
+          },
+          {
+            "ModuleName": "Invoice Generation & Tracking",
+            "Permissions": [
+              "LeaseManagement.CanCreateSalesInvoice",
+              "LeaseManagement.CanEditSalesInvoice",
+              "LeaseManagement.CanExportSalesInvoice"
+            ]
+          },
+          {
+            "ModuleName": "Tenant Information Management",
+            "Permissions": ["LeaseManagement.CanViewTenantInformationManagement"]
+          }
+        ]
+      },
+      {
+        "ModuleName": "Concession",
+        "SubModule": [
+          {
+            "ModuleName": "Concessionaire Fee",
+            "Permissions": ["Concession.CanViewConcessionFee", "Concession.CanExportConcessionFee"]
+          },
+          {
+            "ModuleName": "Journal Entry Voucher",
+            "Permissions": ["Concession.CanViewJEV", "Concession.CanExportJEV"]
+          }
+        ]
+      },
+      {
+        "ModuleName": "Raw Water Management",
+        "SubModule": [
+          {
+            "ModuleName": "Dashboard",
+            "Permissions": [
+              "RawWaterManagement.CanViewDashboard",
+              "RawWaterManagement.CanExportDashboardData"
+            ]
+          },
+          {
+            "ModuleName": "Billing Management",
+            "Permissions": [
+              "RawWaterManagement.CanCreateSOA",
+              "RawWaterManagement.CanViewSOA",
+              "RawWaterManagement.CanExportSOA",
+
+              "RawWaterManagement.CanCreateBS",
+              "RawWaterManagement.CanViewBS",
+              "RawWaterManagement.CanEditBS",
+              "RawWaterManagement.CanViewBillingActivity",
+              "RawWaterManagement.CanExportBS",
+
+              "RawWaterManagement.CanCreateDTP",
+              "RawWaterManagement.CanViewDTP",
+              "RawWaterManagement.CanExportDTP",
+
+              "RawWaterManagement.CanViewJEV",
+              "RawWaterManagement.CanExportJEV"
+            ]
+          },
+          {
+            "ModuleName": "Invoice Generation & Tracking",
+            "Permissions": [
+              "RawWaterManagement.CanCreateSalesInvoice",
+              "RawWaterManagement.CanEditSalesInvoice",
+              "RawWaterManagement.CanExportSalesInvoice",
+              "RawWaterManagement.CanViewCustomerInvoiceReports",
+              "RawWaterManagement.CanExportCustomerInvoiceReports"
+            ]
+          },
+          {
+            "ModuleName": "Customer Information Management",
+            "Permissions": [
+              "RawWaterManagement.CanViewListOfCustomers",
+              "RawWaterManagement.CanCreateCustomer",
+              "RawWaterManagement.CanUpdateCustomer",
+              "RawWaterManagement.CanViewCustomer",
+              "RawWaterManagement.CanExportCustomer"
+            ]
+          },
+          {
+            "ModuleName": "Payment Monitoring",
+            "Permissions": [
+              "RawWaterManagement.CanPostPaymentReconciliation",
+              "RawWaterManagement.CanViewPaymentHistory",
+              "RawWaterManagement.CanViewPaymentReminder"
+            ]
+          },
+          {
+            "ModuleName": "Payment Computation"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "ModuleName": "Budget Management"
+  },
+  {
+    "ModuleName": "Disbursement Management"
+  },
+  {
+    "ModuleName": "Treasury Management"
+  },
+  {
+    "ModuleName": "Loan Management"
+  },
+  {
+    "ModuleName": "Property, Plant & Equipment Management"
+  },
+  {
+    "ModuleName": "Bank Reconciliation"
+  },
+  {
+    "ModuleName": "Financial Reporting"
+  },
+  {
+    "ModuleName": "Provident Fund"
+  },
+  {
+    "ModuleName": "Tax Compliance"
+  },
+  {
+    "ModuleName": "System Administration"
+  }
+]

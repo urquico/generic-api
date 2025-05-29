@@ -110,9 +110,12 @@ if (args.Contains("--seed"))
 
         var keyCategorySeeder = new KeyCategoriesSeed(dbContext);
         var accountSeeder = new AccountsSeed(dbContext, app.Configuration);
+        var modulesSeeder = new ModulesSeeder(dbContext);
 
         keyCategorySeeder.Seed();
         accountSeeder.Seed();
+
+        modulesSeeder.Seed();
     }
     return;
 }
