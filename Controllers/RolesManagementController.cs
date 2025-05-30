@@ -7,8 +7,10 @@ using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Utils;
 using GenericApi.Utils.Roles;
+using GenericApi.Utils.SwaggerSummary;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace GenericApi.Controllers
@@ -106,6 +108,7 @@ namespace GenericApi.Controllers
         [PermissionAuthorize("Admin.CanCreateRole")]
         [ProducesResponseType(typeof(void), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = RoleSummary.CREATE)]
         public IActionResult CreateRole([FromBody] CreateRoleRequestDto createRoleRequestDto)
         {
             try
@@ -173,41 +176,79 @@ namespace GenericApi.Controllers
          * @param {string} roleId - The ID of the role to update.
          * @returns {IActionResult} 200 if role updated successfully, 500 if an error occurred.
          * @route PATCH /:roleId
-         * @example response - 200 - Role updated successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "Role has been updated successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while updating the role."
-         * }
         */
         [HttpPatch("{roleId}")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        public IActionResult UpdateRole(string roleId)
+        [PermissionAuthorize("Admin.CanUpdateRole")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = RoleSummary.UPDATE)]
+        public IActionResult UpdateRole(string roleId, [FromBody] UpdateRoleRequestDto dto)
         {
             try
             {
-                // TODO: Implement the logic to update a specific role
+                var role = _context
+                    .Roles.Include(r => r.RoleModulePermissions)
+                    .FirstOrDefault(r => r.Id.ToString() == roleId);
 
-                const string activity = "Role has been updated successfully.";
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+                if (role == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(UpdateRoleMessages.ROLE_NOT_FOUND)
+                    );
+                }
+
+                // Update role info
+                role.RoleName = dto.RoleName;
+                role.RoleStatus = dto.RoleStatus;
+                role.UpdatedAt = DateTime.UtcNow;
+                role.UpdatedBy = _tokenService
+                    .GetUserFromAccessToken(Request.Cookies["accessToken"] ?? string.Empty)
+                    ?.Id;
+
+                // Update permissions
+                _context.RoleModulePermissions.RemoveRange(role.RoleModulePermissions);
+                role.RoleModulePermissions =
+                [
+                    .. dto.Permissions.Select(pid => new RoleModulePermission
+                    {
+                        PermissionId = pid,
+                        RoleId = role.Id,
+                        CreatedAt = DateTime.UtcNow,
+                    }),
+                ];
+
+                _context.SaveChanges();
+
+                // Prepare response (similar to your CreateRole)
+                var updatedPermissions = role
+                    .RoleModulePermissions.Select(rmp => new CreatedPermissionDto
+                    {
+                        PermissionId = rmp.PermissionId,
+                        PermissionName =
+                            _context
+                                .ModulePermissions.FirstOrDefault(mp => mp.Id == rmp.PermissionId)
+                                ?.PermissionName ?? "Unknown",
+                    })
+                    .ToList();
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(UpdateRoleMessages.ACTIVITY_LOG, role.RoleName),
+                    ip: HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP",
+                    message: UpdateRoleMessages.SUCCESS,
+                    data: new UpdateRoleResponseDto
+                    {
+                        RoleName = role.RoleName,
+                        RoleId = role.Id,
+                        Permissions = updatedPermissions,
+                    }
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
