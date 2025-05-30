@@ -143,18 +143,23 @@ namespace GenericApi.Controllers
                     activity: string.Format(CreateRoleMessages.ACTIVITY_LOG, newRole.RoleName),
                     ip: ip,
                     message: CreateRoleMessages.SUCCESS,
-                    data: new
+                    data: new CreateRoleResponseDto
                     {
                         RoleName = newRole.RoleName,
                         RoleId = newRole.Id,
-                        Permissions = newRole.RoleModulePermissions.Select(p => new
-                        {
-                            PermissionId = p.PermissionId,
-                            PermissionName = _context
-                                .ModulePermissions.Where(mp => mp.Id == p.PermissionId)
-                                .Select(mp => mp.PermissionName)
-                                .FirstOrDefault(),
-                        }),
+                        Permissions =
+                        [
+                            .. newRole.RoleModulePermissions.Select(rmp => new CreatedPermissionDto
+                            {
+                                PermissionId = rmp.PermissionId,
+                                PermissionName =
+                                    _context
+                                        .ModulePermissions.FirstOrDefault(mp =>
+                                            mp.Id == rmp.PermissionId
+                                        )
+                                        ?.PermissionName ?? "Unknown",
+                            }),
+                        ],
                     }
                 );
             }
