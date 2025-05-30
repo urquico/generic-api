@@ -6,12 +6,17 @@ using GenericApi.Dtos.RolesManagement;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Utils;
+using GenericApi.Utils.Roles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace GenericApi.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/v1/roles")]
+    [SwaggerTag("Roles Management")]
     public class RolesManagementController(TokenService tokenService) : ControllerBase
     {
         private readonly CustomSuccess _response = new();
@@ -96,21 +101,11 @@ namespace GenericApi.Controllers
         /**
          * @returns {IActionResult} 201 if role created successfully, 500 if an error occurred.
          * @route POST /
-         * @example response - 201 - Role created successfully
-         * {
-         *   "statusCode": 201,
-         *   "message": "Role has been created successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while creating the role."
-         * }
         */
         [HttpPost]
-        [ProducesResponseType(typeof(void), 201)]
-        [ProducesResponseType(typeof(object), 500)]
+        [PermissionAuthorize("Admin.CanCreateRole")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public IActionResult CreateRole([FromBody] CreateRoleRequestDto createRoleRequestDto)
         {
             try
@@ -126,7 +121,12 @@ namespace GenericApi.Controllers
                     RoleModulePermissions =
                     [
                         .. createRoleRequestDto.Permissions.Select(
-                            permissionId => new RoleModulePermission { PermissionId = permissionId }
+                            permissionId => new RoleModulePermission
+                            {
+                                PermissionId = permissionId,
+                                CreatedBy = user?.Id,
+                                CreatedAt = DateTime.UtcNow,
+                            }
                         ),
                     ],
                     CreatedAt = DateTime.UtcNow,
@@ -136,20 +136,31 @@ namespace GenericApi.Controllers
                 _context.Roles.Add(newRole);
                 _context.SaveChanges();
 
-                const string activity = "Role has been created successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 201,
-                    activity: activity,
+                    statusCode: StatusCodes.Status201Created,
+                    activity: string.Format(CreateRoleMessages.ACTIVITY_LOG, newRole.RoleName),
                     ip: ip,
-                    message: activity,
-                    data: null
+                    message: CreateRoleMessages.SUCCESS,
+                    data: new
+                    {
+                        RoleName = newRole.RoleName,
+                        RoleId = newRole.Id,
+                        Permissions = newRole.RoleModulePermissions.Select(p => new
+                        {
+                            PermissionId = p.PermissionId,
+                            PermissionName = _context
+                                .ModulePermissions.Where(mp => mp.Id == p.PermissionId)
+                                .Select(mp => mp.PermissionName)
+                                .FirstOrDefault(),
+                        }),
+                    }
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
