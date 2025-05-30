@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GenericApi.Dtos.RolesManagement;
+using GenericApi.Models;
+using GenericApi.Services.Auth;
 using GenericApi.Utils;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,25 +12,17 @@ namespace GenericApi.Controllers
 {
     [ApiController]
     [Route("api/v1/roles")]
-    public class RolesManagementController : ControllerBase
+    public class RolesManagementController(TokenService tokenService) : ControllerBase
     {
         private readonly CustomSuccess _response = new();
+        private readonly AppDbContext _context = new();
+
+        private readonly TokenService _tokenService = tokenService;
 
         /**
          * @query {string} query - Optional query parameter for filtering roles.
          * @returns {IActionResult} 200 if roles retrieved successfully, 500 if an error occurred.
          * @route GET /all
-         * @example response - 200 - Roles retrieved successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "Roles have been retrieved successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while retrieving roles."
-         * }
         */
         [HttpGet("all")]
         [ProducesResponseType(typeof(void), 200)]
@@ -116,11 +111,30 @@ namespace GenericApi.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(void), 201)]
         [ProducesResponseType(typeof(object), 500)]
-        public IActionResult CreateRole()
+        public IActionResult CreateRole([FromBody] CreateRoleRequestDto createRoleRequestDto)
         {
             try
             {
-                // TODO: Implement the logic to create a new role
+                var accessToken = Request.Cookies["accessToken"];
+                var user = _tokenService.GetUserFromAccessToken(accessToken ?? string.Empty);
+
+                // Insert the new role into the database
+                var newRole = new Role
+                {
+                    RoleName = createRoleRequestDto.RoleName,
+                    RoleStatus = true, // Active by default
+                    RoleModulePermissions =
+                    [
+                        .. createRoleRequestDto.Permissions.Select(
+                            permissionId => new RoleModulePermission { PermissionId = permissionId }
+                        ),
+                    ],
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = user?.Id, // Use the user ID from the token
+                };
+
+                _context.Roles.Add(newRole);
+                _context.SaveChanges();
 
                 const string activity = "Role has been created successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
