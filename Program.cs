@@ -2,6 +2,7 @@ using System.Text;
 using GenericApi.Models;
 using GenericApi.Seed;
 using GenericApi.Services.Auth;
+using GenericApi.Services.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +75,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<UsersService>();
+
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 builder.Services.AddEndpointsApiExplorer();

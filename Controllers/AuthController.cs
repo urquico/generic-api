@@ -1,6 +1,7 @@
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
+using GenericApi.Services.Users;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
 using GenericApi.Utils.SwaggerSummary;
@@ -15,13 +16,17 @@ namespace GenericApi.Controllers
     [Authorize]
     [Route("api/v1/auth")]
     [SwaggerTag("Authentication and Authorization")]
-    public class AuthController(TokenService tokenService, IConfiguration configuration)
-        : ControllerBase
+    public class AuthController(
+        TokenService tokenService,
+        IConfiguration configuration,
+        UsersService usersService
+    ) : ControllerBase
     {
         private readonly CustomSuccess _response = new();
         private readonly TokenService _tokenService = tokenService;
         private readonly AppDbContext _context = new();
         private readonly IConfiguration _configuration = configuration;
+        private readonly UsersService _usersService = usersService;
 
         /**
          * Signup endpoint allows a new user to register.
@@ -40,54 +45,11 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // Check if the email already exists
-                var existingUser = _context.Users.FirstOrDefault(u =>
-                    u.Email == signupRequestDto.Email
-                );
-                if (existingUser != null)
-                {
-                    return _response.Error(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        e: new Exception(SignupMessages.EMAIL_ALREADY_EXISTS),
-                        saveLog: true
-                    );
-                }
-
-                // Check if password and confirm password match
-                if (signupRequestDto.Password != signupRequestDto.ConfirmPassword)
-                {
-                    return _response.Error(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        e: new Exception(SignupMessages.PASSWORD_CONFIRMATION_MISMATCH),
-                        saveLog: true
-                    );
-                }
-
-                var saltRoundsStr = _configuration.GetSection("PasswordHashing")["SaltRounds"];
-                int saltRounds = int.TryParse(saltRoundsStr, out var rounds) ? rounds : 12; // fallback to 12
-                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(
-                    signupRequestDto.Password,
-                    workFactor: saltRounds
-                );
-
-                // save the new user to the database
-                _context.Users.Add(
-                    new User
-                    {
-                        Email = signupRequestDto.Email,
-                        Password = hashedPassword,
-                        FirstName = signupRequestDto.FirstName,
-                        MiddleName = signupRequestDto.MiddleName,
-                        LastName = signupRequestDto.LastName,
-                        StatusId = 1,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                    }
-                );
-
-                _context.SaveChanges();
+                var insertedUser = _usersService.CreateUser(signupRequestDto, null);
 
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+
+                Console.WriteLine(insertedUser);
 
                 return _response.Success(
                     statusCode: StatusCodes.Status200OK,
