@@ -46,6 +46,20 @@ namespace GenericApi.Services.Users
                 workFactor: saltRounds
             );
 
+            // Check if the createUser.UserRoles is empty, null, or contains 0
+            if (
+                createUser.UserRoles == null
+                || createUser.UserRoles.Count == 0
+                || createUser.UserRoles.Contains(0)
+            )
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    e: new Exception(SignupMessages.USER_ROLES_EMPTY),
+                    saveLog: true
+                );
+            }
+
             // save the new user to the database
             var insertedUser = _context.Users.Add(
                 new User

@@ -17,5 +17,7 @@ namespace GenericApi.Utils.Auth
             "Signup successful. Please check your email to verify your account.";
 
         public const string SIGNUP_ACTIVITY_LOG = "User signed up with email: {0}";
+        public const string USER_ROLES_EMPTY =
+            "User roles cannot be empty. Please select at least one role.";
     }
 }

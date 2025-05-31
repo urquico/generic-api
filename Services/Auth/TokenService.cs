@@ -50,6 +50,7 @@ namespace GenericApi.Services.Auth
                 "UserManagement.UpdateUser",
                 "UserManagement.DeleteUser",
                 "Admin.CanCreateRole",
+                "Admin.CanCreateUser",
             };
 
             var testRoles = new List<string> { "Admin", "User", "Manager" };

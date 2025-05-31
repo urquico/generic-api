@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.UserManagement;
 using GenericApi.Services.Auth;
+using GenericApi.Services.Users;
 using GenericApi.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,9 +15,13 @@ namespace GenericApi.Controllers
     [ApiController]
     [Authorize]
     [Route("api/v1/users")]
-    public class UserManagementController : ControllerBase
+    [SwaggerTag("Users Management")]
+    public class UserManagementController(UsersService usersService, TokenService tokenService)
+        : ControllerBase
     {
         private readonly CustomSuccess _response = new();
+        private readonly UsersService _usersService = usersService;
+        private readonly TokenService _tokenService = tokenService;
 
         /**
          * Get all users endpoint allows fetching all users with optional filters.
@@ -116,42 +121,30 @@ namespace GenericApi.Controllers
          * @param createUserDto The request body containing user data.
          * @returns {IActionResult} 200 if creation is successful, 500 if an error occurred.
          * @route POST /
-         * @example response - 200 - User created successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User created successfully.",
-         *   "data": User
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while creating the user."
-         * }
         */
         [HttpPost]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [PermissionAuthorize("Admin.CanCreateUser")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = "Create a new user.")]
         public IActionResult CreateUser([FromBody] CreateUserRequestDto createUserDto)
         {
             try
             {
-                // TODO: Implement the logic for creating a new user
-
-                const string activity = "User created successfully.";
+                var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
+                var loggedUser = _tokenService.GetUserFromAccessToken(accessToken);
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
+                return _usersService.CreateUser(
+                    createUser: createUserDto,
+                    userId: loggedUser.Id,
+                    ip: ip
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
