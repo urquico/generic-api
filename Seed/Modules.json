@@ -166,6 +166,15 @@
     "ModuleName": "Tax Compliance"
   },
   {
-    "ModuleName": "System Administration"
+    "ModuleName": "System Administration",
+    "SubModule": [
+      {
+        "ModuleName": "User Management"
+      },
+      {
+        "ModuleName": "Role Management",
+        "Permissions": ["Admin.CanCreateRole", "Admin.CanUpdateRole"]
+      }
+    ]
   }
 ]
