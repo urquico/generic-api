@@ -221,7 +221,6 @@ namespace GenericApi.Controllers
 
                 _context.SaveChanges();
 
-                // Prepare response (similar to your CreateRole)
                 var updatedPermissions = role
                     .RoleModulePermissions.Select(rmp => new CreatedPermissionDto
                     {
