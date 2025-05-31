@@ -45,27 +45,12 @@ namespace GenericApi.Controllers
         {
             try
             {
-                var insertedUser = _usersService.CreateUser(signupRequestDto, null);
-
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                Console.WriteLine(insertedUser);
-
-                return _response.Success(
-                    statusCode: StatusCodes.Status200OK,
-                    activity: string.Format(
-                        SignupMessages.SIGNUP_ACTIVITY_LOG,
-                        signupRequestDto.Email
-                    ),
-                    ip: ip,
-                    message: SignupMessages.SUCCESS_SIGNUP,
-                    data: new SignupResponseDto
-                    {
-                        Email = signupRequestDto.Email,
-                        FirstName = signupRequestDto.FirstName,
-                        MiddleName = signupRequestDto.MiddleName,
-                        LastName = signupRequestDto.LastName,
-                    }
+                return _usersService.CreateUser(
+                    createUser: signupRequestDto,
+                    userId: null, // No user ID for signup
+                    ip: ip
                 );
             }
             catch (Exception ex)

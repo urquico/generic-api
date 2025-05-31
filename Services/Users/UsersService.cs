@@ -16,7 +16,7 @@ namespace GenericApi.Services.Users
         private readonly CustomSuccess _response = new();
         private readonly IConfiguration _configuration = configuration;
 
-        public IActionResult CreateUser(SignupRequestDto createUser, int? userId)
+        public IActionResult CreateUser(SignupRequestDto createUser, int? userId, string ip)
         {
             // Check if the email already exists
             var existingUser = _context.Users.FirstOrDefault(u => u.Email == createUser.Email);
@@ -76,14 +76,23 @@ namespace GenericApi.Services.Users
 
             return _response.Success(
                 statusCode: StatusCodes.Status201Created,
-                message: "User created successfully.",
+                activity: string.Format(
+                    SignupMessages.SIGNUP_ACTIVITY_LOG,
+                    insertedUser.Entity.Email
+                ),
+                ip: ip,
+                message: SignupMessages.SUCCESS_SIGNUP,
                 data: new
                 {
                     insertedUser.Entity.Id,
                     insertedUser.Entity.Email,
                     insertedUser.Entity.FirstName,
                     insertedUser.Entity.LastName,
-                    // Add other fields as needed
+                    Value = insertedUser.Entity.UserRoles.Select(ur => new
+                    {
+                        ur.RoleId,
+                        RoleName = _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
+                    }),
                 }
             );
         }
