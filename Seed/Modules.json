@@ -169,7 +169,8 @@
     "ModuleName": "System Administration",
     "SubModule": [
       {
-        "ModuleName": "User Management"
+        "ModuleName": "User Management",
+        "Permissions": ["Admin.CanCreateUser"]
       },
       {
         "ModuleName": "Role Management",

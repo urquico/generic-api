@@ -31,15 +31,13 @@ public partial class User
 
     public int? DeletedBy { get; set; }
 
-    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = [];
 
     public virtual KeyCategory? Status { get; set; }
 
-    public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public virtual ICollection<UserRole> UserRoles { get; set; } = [];
 
-    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } =
-        new List<UserSecurityQuestion>();
+    public virtual ICollection<UserSecurityQuestion> UserSecurityQuestions { get; set; } = [];
 
-    public virtual ICollection<UserSpecialPermission> UserSpecialPermissions { get; set; } =
-        new List<UserSpecialPermission>();
+    public virtual ICollection<UserSpecialPermission> UserSpecialPermissions { get; set; } = [];
 }
