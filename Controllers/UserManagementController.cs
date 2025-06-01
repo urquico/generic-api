@@ -278,6 +278,7 @@ namespace GenericApi.Controllers
          * @route PATCH /{userId}/status
         */
         [HttpPatch("{userId}/status")]
+        [PermissionAuthorize("Admin.CanUpdateUserStatus")]
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
