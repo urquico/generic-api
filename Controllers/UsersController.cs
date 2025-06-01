@@ -55,17 +55,6 @@ namespace GenericApi.Controllers
          *
          * @returns {IActionResult} 204 if user information updated successfully, 500 if an error occurred.
          * @route PATCH /me
-         * @example response - 204 - User information updated successfully
-         * {
-         *   "statusCode": 204,
-         *   "message": "User information has been updated successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while updating user information."
-         * }
         */
         [HttpPatch("me")]
         [ProducesResponseType(typeof(void), 200)]

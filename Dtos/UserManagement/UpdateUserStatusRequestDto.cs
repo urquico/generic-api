@@ -7,6 +7,6 @@ namespace GenericApi.Dtos.UserManagement
 {
     public class UpdateUserStatusRequestDto
     {
-        public string Status { get; set; } = string.Empty; // e.g., "Active", "Inactive", "Suspended"
+        public required int Status { get; set; }
     }
 }
