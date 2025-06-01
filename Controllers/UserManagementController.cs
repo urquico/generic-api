@@ -78,8 +78,9 @@ namespace GenericApi.Controllers
         */
         [HttpGet("{userId}")]
         [PermissionAuthorize("Admin.CanGetUserById")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = "Get user by ID.")]
         public IActionResult GetUserById([FromRoute] int userId)
         {
@@ -89,7 +90,7 @@ namespace GenericApi.Controllers
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 

@@ -31,8 +31,9 @@ namespace GenericApi.Controllers
          * @route GET /me
         */
         [HttpGet("me")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = "Retrieve the authenticated user's information.")]
         public IActionResult GetUserInfo()
         {
@@ -45,7 +46,7 @@ namespace GenericApi.Controllers
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
