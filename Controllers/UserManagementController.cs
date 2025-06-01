@@ -75,17 +75,6 @@ namespace GenericApi.Controllers
          * @param id The ID of the user to fetch.
          * @returns {IActionResult} 200 if fetching is successful, 500 if an error occurred.
          * @route GET /{userId}
-         * @example response - 200 - User fetched successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User fetched successfully.",
-         *   "data": User
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while fetching the user."
-         * }
         */
         [HttpGet("{userId}")]
         [PermissionAuthorize("Admin.CanGetUserById")]
