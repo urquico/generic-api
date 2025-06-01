@@ -6,6 +6,7 @@ using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
+using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GenericApi.Services.Users
@@ -105,9 +106,47 @@ namespace GenericApi.Services.Users
                     Value = insertedUser.Entity.UserRoles.Select(ur => new
                     {
                         ur.RoleId,
-                        RoleName = _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
+                        _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
                     }),
                 }
+            );
+        }
+
+        public IActionResult GetUserById(int userId)
+        {
+            // get user by its userId
+            var user = _context
+                .Users.Where(u => u.Id == userId)
+                .AsEnumerable()
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Email,
+                    u.FirstName,
+                    u.MiddleName,
+                    u.LastName,
+                    UserRoles = u.UserRoles.Select(ur => new
+                    {
+                        ur.RoleId,
+                        _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
+                    }),
+                })
+                .FirstOrDefault();
+
+            // check if user exists
+            if (user == null)
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status404NotFound,
+                    e: new Exception(GetUserMessages.NOT_FOUND),
+                    saveLog: true
+                );
+            }
+
+            return _response.Success(
+                statusCode: StatusCodes.Status200OK,
+                message: GetUserMessages.SUCCESS,
+                data: user
             );
         }
     }
