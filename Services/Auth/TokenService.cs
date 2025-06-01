@@ -42,17 +42,26 @@ namespace GenericApi.Services.Auth
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
             // Every time an access token is generated, get the roles and list of permissions for the user
-            var roles = _context
-                .UserRoles.Where(ur => ur.UserId == user.Id)
-                .Select(ur => ur.Role.RoleName)
-                .Distinct()
-                .ToList();
+            // var roles = _context
+            //     .UserRoles.Where(ur => ur.UserId == user.Id)
+            //     .Select(ur => ur.Role)
+            //     .ToList();
 
-            var permissions = _context
-                .RoleModulePermissions.Where(rmp => roles.Contains(rmp.Role.RoleName))
-                .Select(rmp => rmp.Permission.PermissionName)
-                .Distinct()
-                .ToList();
+            // Console.WriteLine(roles);
+
+            var testPermissions = new List<string>
+            {
+                "UserManagement.GetAllUsers",
+                "UserManagement.CreateUser",
+                "UserManagement.UpdateUser",
+                "UserManagement.DeleteUser",
+                "Admin.CanCreateRole",
+                "Admin.CanCreateUser",
+                "Admin.CanGetUserById",
+                "Admin.CanUpdateUserStatus",
+            };
+
+            var testRoles = new List<string> { "Admin", "User", "Manager" };
 
             var claims = new List<Claim>
             {
@@ -67,13 +76,13 @@ namespace GenericApi.Services.Auth
 
             // TODO: Insert roles and permissions dynamically from the database
             // persisting roles in the claims
-            foreach (var role in roles)
+            foreach (var role in testRoles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
             // persisting permissions in the claims
-            foreach (var permission in permissions)
+            foreach (var permission in testPermissions)
             {
                 claims.Add(new Claim("permission", permission));
             }
@@ -88,7 +97,7 @@ namespace GenericApi.Services.Auth
 
             return new TokenResult(
                 new JwtSecurityTokenHandler().WriteToken(token),
-                [.. permissions]
+                testPermissions
             );
         }
 

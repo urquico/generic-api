@@ -97,7 +97,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// ! Uncomment the next line to enable HTTPS redirection
+// app.UseHttpsRedirection();
 
 app.UseCors();
 app.UseAuthentication();
