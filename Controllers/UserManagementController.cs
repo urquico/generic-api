@@ -88,26 +88,15 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpGet("{userId}")]
-        [PermissionAuthorize("CanGetUserById")]
+        [PermissionAuthorize("Admin.CanGetUserById")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Get user by ID.")]
-        public IActionResult GetUserById([FromRoute] string userId)
+        public IActionResult GetUserById([FromRoute] int userId)
         {
             try
             {
-                // TODO: Implement the logic for getting user by ID
-
-                const string activity = "User fetched successfully.";
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
-
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
-                );
+                return _usersService.GetUserById(userId);
             }
             catch (Exception ex)
             {

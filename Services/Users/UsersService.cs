@@ -117,7 +117,6 @@ namespace GenericApi.Services.Users
             // get user by its userId
             var user = _context
                 .Users.Where(u => u.Id == userId)
-                .AsEnumerable()
                 .Select(u => new
                 {
                     u.Id,
@@ -125,10 +124,17 @@ namespace GenericApi.Services.Users
                     u.FirstName,
                     u.MiddleName,
                     u.LastName,
-                    UserRoles = u.UserRoles.Select(ur => new
+                    // get status name
+                    Status = u.Status != null ? u.Status.CategoryValue : null,
+
+                    // Get all of its roles based from the UserRoles table and get the role name from the Roles table
+                    Roles = u.UserRoles.Select(ur => new
                     {
                         ur.RoleId,
-                        _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
+                        RoleName = _context
+                            .Roles.Where(r => r.Id == ur.RoleId)
+                            .Select(r => r.RoleName)
+                            .FirstOrDefault(),
                     }),
                 })
                 .FirstOrDefault();
