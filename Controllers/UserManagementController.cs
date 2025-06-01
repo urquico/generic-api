@@ -75,43 +75,22 @@ namespace GenericApi.Controllers
          * @param id The ID of the user to fetch.
          * @returns {IActionResult} 200 if fetching is successful, 500 if an error occurred.
          * @route GET /{userId}
-         * @example response - 200 - User fetched successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User fetched successfully.",
-         *   "data": User
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while fetching the user."
-         * }
         */
         [HttpGet("{userId}")]
-        [PermissionAuthorize("CanGetUserById")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [PermissionAuthorize("Admin.CanGetUserById")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = "Get user by ID.")]
-        public IActionResult GetUserById([FromRoute] string userId)
+        public IActionResult GetUserById([FromRoute] int userId)
         {
             try
             {
-                // TODO: Implement the logic for getting user by ID
-
-                const string activity = "User fetched successfully.";
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
-
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
-                );
+                return _usersService.GetUserById(userId);
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 

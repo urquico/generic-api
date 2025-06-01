@@ -6,6 +6,7 @@ using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
+using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GenericApi.Services.Users
@@ -105,9 +106,53 @@ namespace GenericApi.Services.Users
                     Value = insertedUser.Entity.UserRoles.Select(ur => new
                     {
                         ur.RoleId,
-                        RoleName = _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
+                        _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
                     }),
                 }
+            );
+        }
+
+        public IActionResult GetUserById(int userId)
+        {
+            // get user by its userId
+            var user = _context
+                .Users.Where(u => u.Id == userId)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Email,
+                    u.FirstName,
+                    u.MiddleName,
+                    u.LastName,
+                    // get status name
+                    Status = u.Status != null ? u.Status.CategoryValue : null,
+
+                    // Get all of its roles based from the UserRoles table and get the role name from the Roles table
+                    Roles = u.UserRoles.Select(ur => new
+                    {
+                        ur.RoleId,
+                        RoleName = _context
+                            .Roles.Where(r => r.Id == ur.RoleId)
+                            .Select(r => r.RoleName)
+                            .FirstOrDefault(),
+                    }),
+                })
+                .FirstOrDefault();
+
+            // check if user exists
+            if (user == null)
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status404NotFound,
+                    e: new Exception(GetUserMessages.NOT_FOUND),
+                    saveLog: true
+                );
+            }
+
+            return _response.Success(
+                statusCode: StatusCodes.Status200OK,
+                message: GetUserMessages.SUCCESS,
+                data: user
             );
         }
     }

@@ -3,61 +3,50 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Users;
+using GenericApi.Services.Auth;
+using GenericApi.Services.Users;
 using GenericApi.Utils;
 using GenericApi.Utils.Users;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace GenericApi.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/v1/users")]
-    public class UsersController : ControllerBase
+    [SwaggerTag("Self User Endpoints")]
+    public class UsersController(TokenService tokenService, UsersService usersService)
+        : ControllerBase
     {
         private readonly CustomSuccess _response = new();
+        private readonly TokenService _tokenService = tokenService;
+        private readonly UsersService _usersService = usersService;
 
         /**
          * GetUserInfo endpoint retrieves the authenticated user's information.
          *
          * @returns {IActionResult} 200 if user information retrieved successfully, 500 if an error occurred.
          * @route GET /me
-         * @example response - 200 - User information retrieved successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User information has been retrieved successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while retrieving user information."
-         * }
         */
-
         [HttpGet("me")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = "Retrieve the authenticated user's information.")]
         public IActionResult GetUserInfo()
         {
             try
             {
-                // TODO: Implement the logic change password
+                var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
+                var userId = _tokenService.GetUserFromAccessToken(accessToken).Id;
 
-                const string activity = "User information has been retrieved successfully.";
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
-
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
-                );
+                return _usersService.GetUserById(userId);
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
