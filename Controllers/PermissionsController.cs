@@ -40,19 +40,18 @@ namespace GenericApi.Controllers
                         PermissionStatus = p.PermissionStatus == 1 ? "Active" : "Inactive",
                         // get module name from the related module
                         ModuleName = p.Module != null ? p.Module.ModuleName : "No Module",
-                        // get breadcrumbs for the module, combine the grandparent and parent names from the module
                     })
                     .ToList();
 
                 return _response.Success(
-                    statusCode: 200,
+                    statusCode: StatusCodes.Status200OK,
                     message: "Permissions retrieved successfully.",
                     data: permissions
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
     }
