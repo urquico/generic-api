@@ -8,6 +8,7 @@ using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Services.Users;
 using GenericApi.Utils;
+using GenericApi.Utils.SwaggerSummary;
 using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace GenericApi.Controllers
 {
     [ApiController]
-    // [Authorize]
+    [Authorize]
     [Route("api/v1/users")]
     [SwaggerTag("Users Management")]
     public class UserManagementController(UsersService usersService, TokenService tokenService)
@@ -35,10 +36,10 @@ namespace GenericApi.Controllers
          * @route GET /all
         */
         [HttpGet("all")]
-        // [PermissionAuthorize("Admin.GetAllUsers")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Get all users with optional filters.")]
+        [PermissionAuthorize("Admin.GetAllUsers")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.GET_ALL_USERS)]
         public IActionResult GetAllUsers([FromQuery] GetAllUsersQueryDto query)
         {
             try
@@ -103,14 +104,14 @@ namespace GenericApi.Controllers
                 };
 
                 return _response.Success(
-                    statusCode: 200,
+                    statusCode: StatusCodes.Status200OK,
                     message: "Users fetched successfully.",
                     data: response
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
@@ -126,7 +127,7 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        [SwaggerOperation(Summary = "Get user by ID.")]
+        [SwaggerOperation(Summary = UsersSummary.GET_SINGLE_USERS)]
         public IActionResult GetUserById([FromRoute] int userId)
         {
             try
@@ -151,7 +152,7 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        [SwaggerOperation(Summary = "Create a new user.")]
+        [SwaggerOperation(Summary = UsersSummary.CREATE_USER)]
         public IActionResult CreateUser([FromBody] CreateUserRequestDto createUserDto)
         {
             try
@@ -194,7 +195,7 @@ namespace GenericApi.Controllers
         [HttpPut("{userId}")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Update user by ID.")]
+        [SwaggerOperation(Summary = UsersSummary.UPDATE_USER)]
         public IActionResult UpdateUserById(
             [FromRoute] string userId,
             [FromBody] UpdateUserRequestDto updateUserDto
