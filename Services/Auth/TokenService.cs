@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -45,17 +46,21 @@ namespace GenericApi.Services.Auth
             // Cache the user roles for the given user ID
             var userRoles = _context
                 .UserRoles.Where(ur => ur.UserId == user.Id)
+                .Include(ur => ur.Role)
+                .ThenInclude(r => r.RoleModulePermissions)
+                .ThenInclude(rmp => rmp.Permission)
                 .ToList();
 
-            // Retrieve roles from the cached user roles
             var roles = userRoles
+                .Where(ur => ur.Role != null)
                 .Select(ur => ur.Role.RoleName)
                 .ToList();
 
-            // Retrieve distinct permissions from the cached user roles
             var permissions = userRoles
+                .Where(ur => ur.Role != null && ur.Role.RoleModulePermissions != null)
                 .SelectMany(ur => ur.Role.RoleModulePermissions)
-                .Select(p => p.Permission.PermissionName)
+                .Where(rmp => rmp.Permission != null && rmp.Permission.PermissionName != null)
+                .Select(rmp => rmp.Permission.PermissionName)
                 .Distinct()
                 .ToList();
 
