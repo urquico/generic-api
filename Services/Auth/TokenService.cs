@@ -42,14 +42,18 @@ namespace GenericApi.Services.Auth
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
             // every time an access token is generated, get the roles and list of permissions for the user
-            var roles = _context
+            // Cache the user roles for the given user ID
+            var userRoles = _context
                 .UserRoles.Where(ur => ur.UserId == user.Id)
+                .ToList();
+
+            // Retrieve roles from the cached user roles
+            var roles = userRoles
                 .Select(ur => ur.Role.RoleName)
                 .ToList();
 
-            // get distinct list of permissions for the user
-            var permissions = _context
-                .UserRoles.Where(ur => ur.UserId == user.Id)
+            // Retrieve distinct permissions from the cached user roles
+            var permissions = userRoles
                 .SelectMany(ur => ur.Role.RoleModulePermissions)
                 .Select(p => p.Permission.PermissionName)
                 .Distinct()
