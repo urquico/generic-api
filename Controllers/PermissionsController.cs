@@ -1,4 +1,5 @@
 using GenericApi.Models;
+using GenericApi.Services.Auth;
 using GenericApi.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,7 @@ namespace GenericApi.Controllers
          * @route GET /all
         */
         [HttpGet("all")]
+        [PermissionAuthorize("Admin.CanViewAllPermissions")]
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = "Retrieve all permissions.")]
@@ -38,18 +40,19 @@ namespace GenericApi.Controllers
                         PermissionStatus = p.PermissionStatus == 1 ? "Active" : "Inactive",
                         // get module name from the related module
                         ModuleName = p.Module != null ? p.Module.ModuleName : "No Module",
+                        // get breadcrumbs for the module, combine the grandparent and parent names from the module
                     })
                     .ToList();
 
                 return _response.Success(
-                    statusCode: StatusCodes.Status200OK,
+                    statusCode: 200,
                     message: "Permissions retrieved successfully.",
                     data: permissions
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
+                return _response.Error(statusCode: 500, e: ex);
             }
         }
     }
