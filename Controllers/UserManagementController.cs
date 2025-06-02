@@ -45,7 +45,7 @@ namespace GenericApi.Controllers
          * }
         */
         [HttpGet("all")]
-        [PermissionAuthorize("UserManagement.GetAllUsers")]
+        [PermissionAuthorize("Admin.GetAllUsers")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Get all users with optional filters.")]
