@@ -1,6 +1,8 @@
 using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Utils;
+using GenericApi.Utils.Permissions;
+using GenericApi.Utils.SwaggerSummary;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -26,7 +28,7 @@ namespace GenericApi.Controllers
         [PermissionAuthorize("Admin.CanViewAllPermissions")]
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        [SwaggerOperation(Summary = "Retrieve all permissions.")]
+        [SwaggerOperation(Summary = PermissionsSummary.GET_ALL)]
         public IActionResult GetAllPermissions()
         {
             try
@@ -45,7 +47,7 @@ namespace GenericApi.Controllers
 
                 return _response.Success(
                     statusCode: StatusCodes.Status200OK,
-                    message: "Permissions retrieved successfully.",
+                    message: GetAllPermissionsMessages.SUCCESS,
                     data: permissions
                 );
             }
