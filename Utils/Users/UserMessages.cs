@@ -7,6 +7,7 @@ namespace GenericApi.Utils.Users
         public const string PASSWORD_MISMATCH = "Passwords do not match.";
         public const string PASSWORD_CHANGE_FAILED =
             "Password change failed. Please try again later.";
+        public const string USER_NOT_FOUND = "User not found. Please check your credentials.";
 
         public const string PASSWORD_CHANGED_SUCCESS = "Password has been changed.";
         public const string CONTAINS_USER_INFO =

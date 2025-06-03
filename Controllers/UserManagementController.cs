@@ -20,13 +20,17 @@ namespace GenericApi.Controllers
     [Authorize]
     [Route("api/v1/users")]
     [SwaggerTag("Users Management")]
-    public class UserManagementController(UsersService usersService, TokenService tokenService)
-        : ControllerBase
+    public class UserManagementController(
+        UsersService usersService,
+        TokenService tokenService,
+        IConfiguration configuration
+    ) : ControllerBase
     {
         private readonly CustomSuccess _response = new();
         private readonly UsersService _usersService = usersService;
         private readonly TokenService _tokenService = tokenService;
         private readonly AppDbContext _context = new();
+        private readonly IConfiguration _configuration = configuration;
 
         /**
          * Get all users endpoint allows fetching all users with optional filters.
@@ -373,42 +377,37 @@ namespace GenericApi.Controllers
          * @param resetPasswordDto The request body containing new password data.
          * @returns {IActionResult} 200 if resetting is successful, 500 if an error occurred.
          * @route PATCH /{userId}/reset
-         * @example response - 200 - User password reset successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User password reset successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while resetting the user password."
-         * }
         */
         [HttpPatch("{userId}/reset")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Reset user password by ID.")]
-        public IActionResult ResetUserPasswordById([FromRoute] string userId)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.RESET_PASSWORD)]
+        public IActionResult ResetUserPasswordById([FromRoute] int userId)
         {
             try
             {
-                // TODO: Implement the logic for resetting user password by ID
-
-                const string activity = "User password reset successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+                string defaultPassword = _configuration["DefaultPassword"] ?? "";
+                if (string.IsNullOrEmpty(defaultPassword) || defaultPassword == "")
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status400BadRequest,
+                        e: new Exception(ResetPasswordMessages.NO_DEFAULT_PASSWORD),
+                        saveLog: true
+                    );
+                }
 
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
+                return _usersService.ChangePassword(
+                    userId: userId,
+                    password: defaultPassword,
+                    ip: ip
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 

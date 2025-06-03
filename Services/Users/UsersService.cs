@@ -40,12 +40,7 @@ namespace GenericApi.Services.Users
                 );
             }
 
-            var saltRoundsStr = _configuration.GetSection("PasswordHashing")["SaltRounds"];
-            int saltRounds = int.TryParse(saltRoundsStr, out var rounds) ? rounds : 12; // fallback to 12
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(
-                createUser.Password,
-                workFactor: saltRounds
-            );
+            var hashedPassword = GenerateHashedPassword(createUser.Password);
 
             // Check if the createUser.UserRoles is empty, null, or contains 0
             if (
@@ -110,6 +105,44 @@ namespace GenericApi.Services.Users
                     }),
                 }
             );
+        }
+
+        public IActionResult ChangePassword(int userId, string password, string ip)
+        {
+            var hashedPassword = GenerateHashedPassword(password);
+
+            // check if user exists
+            var existingUser = _context.Users.FirstOrDefault(u => u.Id == userId);
+            if (existingUser == null)
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status404NotFound,
+                    e: new Exception(UserMessages.USER_NOT_FOUND),
+                    saveLog: true
+                );
+            }
+
+            // update user password
+            existingUser.Password = hashedPassword;
+            existingUser.UpdatedAt = DateTime.UtcNow;
+            existingUser.UpdatedBy = userId;
+            _context.Update(existingUser);
+            _context.SaveChanges();
+
+            return _response.Success(
+                statusCode: StatusCodes.Status200OK,
+                activity: UserMessages.PASSWORD_CHANGED_SUCCESS,
+                ip: ip,
+                message: UserMessages.PASSWORD_CHANGED_SUCCESS,
+                data: null
+            );
+        }
+
+        public string GenerateHashedPassword(string password)
+        {
+            var saltRoundsStr = _configuration.GetSection("PasswordHashing")["SaltRounds"];
+            int saltRounds = int.TryParse(saltRoundsStr, out var rounds) ? rounds : 12; // fallback to 12
+            return BCrypt.Net.BCrypt.HashPassword(password, workFactor: saltRounds);
         }
 
         public IActionResult UpdateUser<T>(int userId, T user, string ip)
