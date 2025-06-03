@@ -394,7 +394,7 @@ namespace GenericApi.Controllers
                 {
                     return _response.Error(
                         statusCode: StatusCodes.Status400BadRequest,
-                        e: new Exception("Default password is not set in the configuration."),
+                        e: new Exception(ResetPasswordMessages.NO_DEFAULT_PASSWORD),
                         saveLog: true
                     );
                 }
