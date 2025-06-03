@@ -65,18 +65,12 @@ namespace GenericApi.Controllers
         {
             try
             {
-                // TODO: Implement the logic change password
-
-                const string activity = "User information has been updated successfully.";
+                var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
+                var userId = _tokenService.GetUserFromAccessToken(accessToken).Id;
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
-                );
+                // update user information
+                return _usersService.UpdateUser(userId, updateUserInfoDto, ip);
             }
             catch (Exception ex)
             {

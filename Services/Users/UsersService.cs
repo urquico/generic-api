@@ -112,6 +112,51 @@ namespace GenericApi.Services.Users
             );
         }
 
+        public IActionResult UpdateUser<T>(int userId, T user, string ip)
+        {
+            // check if user exists
+            var existingUser = _context.Users.FirstOrDefault(u => u.Id == userId);
+            if (existingUser == null)
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status404NotFound,
+                    e: new Exception(UpdateUserMessages.NOT_FOUND),
+                    saveLog: true
+                );
+            }
+
+            // update user information
+            if (user != null)
+            {
+                foreach (var prop in typeof(T).GetProperties())
+                {
+                    var value = prop.GetValue(user);
+                    if (value != null)
+                    {
+                        var existingProp = existingUser.GetType().GetProperty(prop.Name);
+                        if (existingProp != null && existingProp.CanWrite)
+                        {
+                            existingProp.SetValue(existingUser, value);
+                        }
+                    }
+                }
+            }
+
+            existingUser.UpdatedAt = DateTime.UtcNow;
+            existingUser.UpdatedBy = userId;
+
+            _context.Update(existingUser);
+            _context.SaveChanges();
+
+            return _response.Success(
+                statusCode: StatusCodes.Status200OK,
+                activity: string.Format(UpdateUserMessages.ACTIVITY, existingUser.Email),
+                ip: ip,
+                message: UpdateUserMessages.SUCCESS,
+                data: null
+            );
+        }
+
         public IActionResult GetUserById(int userId)
         {
             // get user by its userId
