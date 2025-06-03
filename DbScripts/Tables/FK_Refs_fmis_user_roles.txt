@@ -1,0 +1,12 @@
+Column 'user_id' in table 'fmis.user_roles' references 
+'fmis.users'(id) 
+via foreign key 'FK_user_roles_user'.
+Column 'role_id' in table 'fmis.user_roles' references 
+'fmis.roles'(id) 
+via foreign key 'FK_user_roles_role'.
+Column 'user_id' in table 'fmis.user_roles' references 
+'fmis.users'(id) 
+via foreign key 'FK_user_roles_user'.
+Column 'role_id' in table 'fmis.user_roles' references 
+'fmis.roles'(id) 
+via foreign key 'FK_user_roles_role'.

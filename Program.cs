@@ -6,6 +6,7 @@ using GenericApi.Services.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -134,5 +135,15 @@ if (args.Contains("--seed"))
     }
     return;
 }
+if (args.Contains("--export"))
+{
+    await DbScriptManager.ExportScriptsAsync(app.Services);
+    return;
+}
 
+if (args.Contains("--runscripts"))
+{
+    await DbScriptManager.RunScriptsAsync(app.Services);
+    return;
+}
 app.Run();
