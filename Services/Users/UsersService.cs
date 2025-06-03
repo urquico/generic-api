@@ -128,29 +128,8 @@ namespace GenericApi.Services.Users
             // update user information
             if (user != null)
             {
-                // Define a list of disallowed properties
-                var disallowedProperties = new HashSet<string> { "Id", "CreatedAt", "UpdatedAt", "UpdatedBy" };
-
-                PropertyInfo[] properties;
-                var type = typeof(T);
-
-                // Retrieve or cache PropertyInfo[]
-                lock (CacheLock)
+                foreach (var prop in typeof(T).GetProperties())
                 {
-                    if (!PropertyCache.TryGetValue(type, out properties))
-                    {
-                        properties = type.GetProperties();
-                        PropertyCache[type] = properties;
-                    }
-                }
-
-                foreach (var prop in properties)
-                {
-                    // Skip disallowed properties
-                    if (disallowedProperties.Contains(prop.Name))
-                    {
-                        continue;
-                    }
                     var value = prop.GetValue(user);
                     if (value != null)
                     {
