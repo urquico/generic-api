@@ -181,6 +181,7 @@ via foreign key '{fk.Name}'.";
             }
             catch (Exception ex)
             {
+                //comment
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Failed to run {Path.GetFileName(file)}");
                 Console.WriteLine(ex.Message);
