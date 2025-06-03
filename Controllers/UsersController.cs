@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Users;
+using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Services.Users;
 using GenericApi.Utils;
@@ -18,12 +19,17 @@ namespace GenericApi.Controllers
     [Authorize]
     [Route("api/v1/users")]
     [SwaggerTag("Self User Endpoints")]
-    public class UsersController(TokenService tokenService, UsersService usersService)
-        : ControllerBase
+    public class UsersController(
+        TokenService tokenService,
+        UsersService usersService,
+        IConfiguration configuration
+    ) : ControllerBase
     {
         private readonly CustomSuccess _response = new();
         private readonly TokenService _tokenService = tokenService;
         private readonly UsersService _usersService = usersService;
+        private readonly IConfiguration _configuration = configuration;
+        private readonly AppDbContext _context = new();
 
         /**
          * GetUserInfo endpoint retrieves the authenticated user's information.
@@ -97,55 +103,38 @@ namespace GenericApi.Controllers
          * }
          */
         [HttpPatch("me/password")]
-        [ProducesResponseType(typeof(void), 201)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.SELF_CHANGE_PASSWORD)]
         public IActionResult ChangePassword([FromBody] ChangePasswordRequestDto changePasswordDto)
         {
             try
             {
-                // Validate the request
-                if (changePasswordDto.OldPassword == "")
+                var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
+                var userId = _tokenService.GetUserFromAccessToken(accessToken).Id;
+
+                // check if Password and ConfirmPassword matches
+                if (changePasswordDto.Password != changePasswordDto.ConfirmPassword)
                 {
                     return _response.Error(
-                        statusCode: 400,
-                        e: new Exception(UserMessages.PASSWORD_MUST_NOT_BE_EMPTY)
+                        statusCode: StatusCodes.Status400BadRequest,
+                        e: new Exception(UserMessages.PASSWORD_MISMATCH),
+                        saveLog: true
                     );
                 }
-
-                if (changePasswordDto.NewPassword == "")
-                {
-                    return _response.Error(
-                        statusCode: 400,
-                        e: new Exception(UserMessages.PASSWORD_MUST_NOT_BE_EMPTY)
-                    );
-                }
-
-                // check if the new password is not the same as the old password
-                if (changePasswordDto.OldPassword != changePasswordDto.NewPassword)
-                {
-                    return _response.Error(
-                        statusCode: 400,
-                        e: new Exception(UserMessages.PASSWORD_MISMATCH)
-                    );
-                }
-
-                // TODO: Implement the logic change password
-
-                const string activity = UserMessages.PASSWORD_CHANGED_SUCCESS;
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _response.Success(
-                    statusCode: 201,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
+                return _usersService.ChangePassword(
+                    userId: userId,
+                    password: changePasswordDto.Password,
+                    ip: ip
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
     }

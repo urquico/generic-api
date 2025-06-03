@@ -7,7 +7,7 @@ namespace GenericApi.Dtos.Users
 {
     public class ChangePasswordRequestDto
     {
-        public string? OldPassword { get; set; } = string.Empty;
-        public string? NewPassword { get; set; } = string.Empty;
+        public required string Password { get; set; } = string.Empty;
+        public required string ConfirmPassword { get; set; } = string.Empty;
     }
 }
