@@ -1,0 +1,7 @@
+Admin.CanViewAllPermissions
+Admin.CanCreateRole
+Admin.CanUpdateRole
+Admin.GetAllUsers
+Admin.CanGetUserById
+Admin.CanCreateUser
+Admin.CanUpdateUserStatus

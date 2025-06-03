@@ -2,6 +2,7 @@ using System.Text;
 using GenericApi.Models;
 using GenericApi.Seed;
 using GenericApi.Services.Auth;
+using GenericApi.Services.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load appsettings.Development.json if --dev argument is provided
+var useDevSettings = args.Contains("--dev");
+if (useDevSettings)
+{
+    builder.Configuration.AddJsonFile(
+        "appsettings.Development.json",
+        optional: true,
+        reloadOnChange: true
+    );
+}
 
 // Configure AppDbContext with SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -75,6 +87,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<UsersService>();
+
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -95,7 +109,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// ! Uncomment the next line to enable HTTPS redirection
+// app.UseHttpsRedirection();
 
 app.UseCors();
 app.UseAuthentication();

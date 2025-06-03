@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -41,17 +42,27 @@ namespace GenericApi.Services.Auth
             var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15");
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
-            // TODO: Every time an access token is generated, get the roles and list of permissions for the user from the database and add them to the claims.
+            // every time an access token is generated, get the roles and list of permissions for the user
+            // Cache the user roles for the given user ID
+            var userRoles = _context
+                .UserRoles.Where(ur => ur.UserId == user.Id)
+                .Include(ur => ur.Role)
+                .ThenInclude(r => r.RoleModulePermissions)
+                .ThenInclude(rmp => rmp.Permission)
+                .ToList();
 
-            var testPermissions = new List<string>
-            {
-                "UserManagement.GetAllUsers",
-                "UserManagement.CreateUser",
-                "UserManagement.UpdateUser",
-                "UserManagement.DeleteUser",
-            };
+            var roles = userRoles
+                .Where(ur => ur.Role != null)
+                .Select(ur => ur.Role.RoleName)
+                .ToList();
 
-            var testRoles = new List<string> { "Admin", "User", "Manager" };
+            var permissions = userRoles
+                .Where(ur => ur.Role != null && ur.Role.RoleModulePermissions != null)
+                .SelectMany(ur => ur.Role.RoleModulePermissions)
+                .Where(rmp => rmp.Permission != null && rmp.Permission.PermissionName != null)
+                .Select(rmp => rmp.Permission.PermissionName)
+                .Distinct()
+                .ToList();
 
             var claims = new List<Claim>
             {
@@ -64,15 +75,14 @@ namespace GenericApi.Services.Auth
                 new("user", System.Text.Json.JsonSerializer.Serialize(user)),
             };
 
-            // TODO: Insert roles and permissions dynamically from the database
-            // persisting roles in the claims
-            foreach (var role in testRoles)
+            // persist roles in the claims
+            foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            // persisting permissions in the claims
-            foreach (var permission in testPermissions)
+            // persist permissions in the claims
+            foreach (var permission in permissions)
             {
                 claims.Add(new Claim("permission", permission));
             }
@@ -85,10 +95,7 @@ namespace GenericApi.Services.Auth
                 signingCredentials: creds
             );
 
-            return new TokenResult(
-                new JwtSecurityTokenHandler().WriteToken(token),
-                testPermissions
-            );
+            return new TokenResult(new JwtSecurityTokenHandler().WriteToken(token), permissions);
         }
 
         public string GenerateRefreshToken(int userId, string userAgent, string? ipAddress = null)
