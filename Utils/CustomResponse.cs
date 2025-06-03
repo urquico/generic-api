@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace ScaffoldTest.Utils
+namespace GenericApi.Utils
 {
     public class CustomSuccess : ControllerBase
     {
@@ -22,8 +22,8 @@ namespace ScaffoldTest.Utils
 
         public ObjectResult Success(
             int statusCode,
-            string activity,
-            string ip,
+            string activity = "",
+            string? ip = null,
             string? message = null,
             object? data = null
         )

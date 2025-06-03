@@ -1,0 +1,17 @@
+[
+  {
+    "CategoryName": "USER_STATUS",
+    "CategoryId": 1,
+    "CategoryValue": "ACTIVE"
+  },
+  {
+    "CategoryName": "USER_STATUS",
+    "CategoryId": 2,
+    "CategoryValue": "INACTIVE"
+  },
+  {
+    "CategoryName": "USER_STATUS",
+    "CategoryId": 3,
+    "CategoryValue": "BLOCKED"
+  }
+]

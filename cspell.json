@@ -4,9 +4,14 @@
   "dictionaryDefinitions": [],
   "dictionaries": [],
   "words": [
+    "appsettings",
     "Dtos",
+    "Hmac",
     "mwss",
-    "Serilog"
+    "Serilog",
+    "simplevia",
+    "SQLEXPRESS",
+    "Swashbuckle"
   ],
   "ignoreWords": [],
   "import": []
