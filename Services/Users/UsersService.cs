@@ -131,7 +131,20 @@ namespace GenericApi.Services.Users
                 // Define a list of disallowed properties
                 var disallowedProperties = new HashSet<string> { "Id", "CreatedAt", "UpdatedAt", "UpdatedBy" };
 
-                foreach (var prop in typeof(T).GetProperties())
+                PropertyInfo[] properties;
+                var type = typeof(T);
+
+                // Retrieve or cache PropertyInfo[]
+                lock (CacheLock)
+                {
+                    if (!PropertyCache.TryGetValue(type, out properties))
+                    {
+                        properties = type.GetProperties();
+                        PropertyCache[type] = properties;
+                    }
+                }
+
+                foreach (var prop in properties)
                 {
                     // Skip disallowed properties
                     if (disallowedProperties.Contains(prop.Name))
