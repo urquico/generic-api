@@ -58,29 +58,24 @@ namespace GenericApi.Controllers
          * @route PATCH /me
         */
         [HttpPatch("me")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.SELF_UPDATE)]
         public IActionResult PatchUserInfo([FromBody] UpdateUserInfoRequestDto updateUserInfoDto)
         {
             try
             {
-                // TODO: Implement the logic change password
-
-                const string activity = "User information has been updated successfully.";
+                var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
+                var userId = _tokenService.GetUserFromAccessToken(accessToken).Id;
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
-                );
+                // update user information
+                return _usersService.UpdateUser(userId: userId, user: updateUserInfoDto, ip: ip);
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 

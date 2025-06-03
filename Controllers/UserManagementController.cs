@@ -180,45 +180,26 @@ namespace GenericApi.Controllers
          * @param updateUserDto The request body containing user update data.
          * @returns {IActionResult} 200 if updating is successful, 500 if an error occurred.
          * @route PUT /{userId}
-         * @example response - 200 - User updated successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User updated
-         * }
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while updating the user."
-         * }
         */
         [HttpPut("{userId}")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.UPDATE_USER)]
         public IActionResult UpdateUserById(
-            [FromRoute] string userId,
+            [FromRoute] int userId,
             [FromBody] UpdateUserRequestDto updateUserDto
         )
         {
             try
             {
-                // TODO: Implement the logic for updating user by ID
-
-                const string activity = "User updated successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
-                );
+                return _usersService.UpdateUser(userId: userId, user: updateUserDto, ip: ip);
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
