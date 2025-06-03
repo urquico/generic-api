@@ -58,8 +58,9 @@ namespace GenericApi.Controllers
          * @route PATCH /me
         */
         [HttpPatch("me")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.SELF_UPDATE)]
         public IActionResult PatchUserInfo([FromBody] UpdateUserInfoRequestDto updateUserInfoDto)
         {
@@ -70,11 +71,11 @@ namespace GenericApi.Controllers
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 // update user information
-                return _usersService.UpdateUser(userId, updateUserInfoDto, ip);
+                return _usersService.UpdateUser(userId: userId, user: updateUserInfoDto, ip: ip);
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
