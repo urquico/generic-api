@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GenericApi.Dtos;
 using GenericApi.Dtos.UserManagement;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Services.Users;
 using GenericApi.Utils;
+using GenericApi.Utils.SwaggerSummary;
 using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,43 +34,84 @@ namespace GenericApi.Controllers
          * @param getAllUsersDto The request body containing user filters.
          * @returns {IActionResult} 200 if fetching is successful, 500 if an error occurred.
          * @route GET /all
-         * @example response - 200 - Users fetched successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "Users fetched successfully.",
-         *   "data": [PaginatedUsers]
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while fetching users."
-         * }
         */
         [HttpGet("all")]
         [PermissionAuthorize("Admin.GetAllUsers")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Get all users with optional filters.")]
-        public IActionResult GetAllUsers([FromQuery] GetAllUsersQueryDto getAllUsersDto)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.GET_ALL_USERS)]
+        public IActionResult GetAllUsers([FromQuery] GetAllUsersQueryDto query)
         {
             try
             {
-                // TODO: Implement the logic for user logout
+                // get all users from the database with optional filters
+                var usersQuery = _context.Users.AsQueryable();
 
-                const string activity = "Users fetched successfully.";
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+                if (query.includeDeleted == 1)
+                {
+                    usersQuery = usersQuery.Where(u => u.DeletedAt != null || u.DeletedAt == null);
+                }
+                else
+                {
+                    usersQuery = usersQuery.Where(u => u.DeletedAt == null);
+                }
+
+                var users = usersQuery
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.Email,
+                        u.FirstName,
+                        u.LastName,
+                        u.CreatedAt,
+                        u.UpdatedAt,
+                        Status = u.Status != null ? u.Status.CategoryValue : null,
+                        Roles = u
+                            .UserRoles.Select(ur => ur.Role != null ? ur.Role.RoleName : null)
+                            .ToList(),
+                        // get last login on the last refresh token
+                        LastLogin = _context
+                            .RefreshTokens.Where(rt => rt.UserId == u.Id)
+                            .OrderByDescending(rt => rt.CreatedAt)
+                            .Select(rt => rt.CreatedAt)
+                            .FirstOrDefault(),
+                    })
+                    .ToList();
+
+                var parsedUsers = users
+                    .Select(u => new GetAllUsersResponseDto
+                    {
+                        Id = u.Id,
+                        Email = u.Email,
+                        FullName = $"{u.FirstName} {u.LastName}",
+                        Status = u.Status ?? "Unknown",
+                        Roles = u.Roles.Where(r => r != null).Select(r => r!).ToArray(),
+                        DateCreated =
+                            u.CreatedAt != null
+                                ? u.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                                : "",
+                        LastLogin = u.LastLogin.HasValue
+                            ? u.LastLogin.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            : "Never",
+                    })
+                    .ToArray();
+                var response = new PaginationResponseDto<GetAllUsersResponseDto[]>
+                {
+                    Items = [parsedUsers],
+                    TotalCount = users.Count,
+                    CurrentPage = 0,
+                    TotalPages = 1,
+                };
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
+                    statusCode: StatusCodes.Status200OK,
+                    message: "Users fetched successfully.",
+                    data: response
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
@@ -84,7 +127,7 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        [SwaggerOperation(Summary = "Get user by ID.")]
+        [SwaggerOperation(Summary = UsersSummary.GET_SINGLE_USERS)]
         public IActionResult GetUserById([FromRoute] int userId)
         {
             try
@@ -109,7 +152,7 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        [SwaggerOperation(Summary = "Create a new user.")]
+        [SwaggerOperation(Summary = UsersSummary.CREATE_USER)]
         public IActionResult CreateUser([FromBody] CreateUserRequestDto createUserDto)
         {
             try
@@ -152,7 +195,7 @@ namespace GenericApi.Controllers
         [HttpPut("{userId}")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Update user by ID.")]
+        [SwaggerOperation(Summary = UsersSummary.UPDATE_USER)]
         public IActionResult UpdateUserById(
             [FromRoute] string userId,
             [FromBody] UpdateUserRequestDto updateUserDto

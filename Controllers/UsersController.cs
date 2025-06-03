@@ -6,6 +6,7 @@ using GenericApi.Dtos.Users;
 using GenericApi.Services.Auth;
 using GenericApi.Services.Users;
 using GenericApi.Utils;
+using GenericApi.Utils.SwaggerSummary;
 using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +35,7 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
-        [SwaggerOperation(Summary = "Retrieve the authenticated user's information.")]
+        [SwaggerOperation(Summary = UsersSummary.SELF_INFO)]
         public IActionResult GetUserInfo()
         {
             try
@@ -59,7 +60,7 @@ namespace GenericApi.Controllers
         [HttpPatch("me")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Update the authenticated user's information.")]
+        [SwaggerOperation(Summary = UsersSummary.SELF_UPDATE)]
         public IActionResult PatchUserInfo([FromBody] UpdateUserInfoRequestDto updateUserInfoDto)
         {
             try
@@ -103,7 +104,7 @@ namespace GenericApi.Controllers
         [HttpPatch("me/password")]
         [ProducesResponseType(typeof(void), 201)]
         [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Change the authenticated user's password.")]
+        [SwaggerOperation(Summary = UsersSummary.SELF_CHANGE_PASSWORD)]
         public IActionResult ChangePassword([FromBody] ChangePasswordRequestDto changePasswordDto)
         {
             try
