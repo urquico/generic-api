@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[module_permissions]    Script Date: 6/4/2025 2:23:02 PM ******/
+/****** Object:  Table [fmis].[module_permissions]    Script Date: 6/4/2025 4:32:10 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[module_permissions](
@@ -19,3 +19,6 @@ CREATE TABLE [fmis].[module_permissions](
 ) ON [PRIMARY]
 
 ALTER TABLE [fmis].[module_permissions] ADD  DEFAULT (getdate()) FOR [created_at]
+ALTER TABLE [fmis].[module_permissions]  WITH CHECK ADD  CONSTRAINT [FK_Permissions_Modules] FOREIGN KEY([module_id])
+REFERENCES [fmis].[modules] ([id])
+ALTER TABLE [fmis].[module_permissions] CHECK CONSTRAINT [FK_Permissions_Modules]

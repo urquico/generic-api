@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[users]    Script Date: 6/4/2025 2:23:15 PM ******/
+/****** Object:  Table [fmis].[users]    Script Date: 6/4/2025 4:32:13 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[users](
@@ -22,3 +22,6 @@ CREATE TABLE [fmis].[users](
 ) ON [PRIMARY]
 
 ALTER TABLE [fmis].[users] ADD  DEFAULT (getdate()) FOR [created_at]
+ALTER TABLE [fmis].[users]  WITH CHECK ADD  CONSTRAINT [FK_Users_StatusKeyCategory] FOREIGN KEY([status_id])
+REFERENCES [mwss].[key_categories] ([id])
+ALTER TABLE [fmis].[users] CHECK CONSTRAINT [FK_Users_StatusKeyCategory]

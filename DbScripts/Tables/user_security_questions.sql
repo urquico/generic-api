@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[user_security_questions]    Script Date: 6/4/2025 2:23:14 PM ******/
+/****** Object:  Table [fmis].[user_security_questions]    Script Date: 6/4/2025 4:32:12 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[user_security_questions](
@@ -23,3 +23,7 @@ ALTER TABLE [fmis].[user_security_questions]  WITH CHECK ADD  CONSTRAINT [FK_Use
 REFERENCES [fmis].[security_questions] ([id])
 ON DELETE CASCADE
 ALTER TABLE [fmis].[user_security_questions] CHECK CONSTRAINT [FK_UserSecurityQuestions_SecurityQuestions]
+ALTER TABLE [fmis].[user_security_questions]  WITH CHECK ADD  CONSTRAINT [FK_UserSecurityQuestions_User] FOREIGN KEY([user_id])
+REFERENCES [fmis].[users] ([id])
+ON DELETE CASCADE
+ALTER TABLE [fmis].[user_security_questions] CHECK CONSTRAINT [FK_UserSecurityQuestions_User]

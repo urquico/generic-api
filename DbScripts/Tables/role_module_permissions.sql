@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[role_module_permissions]    Script Date: 6/4/2025 2:23:07 PM ******/
+/****** Object:  Table [fmis].[role_module_permissions]    Script Date: 6/4/2025 4:32:11 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[role_module_permissions](
@@ -22,3 +22,7 @@ ALTER TABLE [fmis].[role_module_permissions]  WITH CHECK ADD  CONSTRAINT [FK_Rol
 REFERENCES [fmis].[module_permissions] ([id])
 ON DELETE CASCADE
 ALTER TABLE [fmis].[role_module_permissions] CHECK CONSTRAINT [FK_RolePermissions_Permissions]
+ALTER TABLE [fmis].[role_module_permissions]  WITH CHECK ADD  CONSTRAINT [FK_RolePermissions_Roles] FOREIGN KEY([role_id])
+REFERENCES [fmis].[roles] ([id])
+ON DELETE CASCADE
+ALTER TABLE [fmis].[role_module_permissions] CHECK CONSTRAINT [FK_RolePermissions_Roles]

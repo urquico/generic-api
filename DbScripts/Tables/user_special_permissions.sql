@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[user_special_permissions]    Script Date: 6/4/2025 2:23:14 PM ******/
+/****** Object:  Table [fmis].[user_special_permissions]    Script Date: 6/4/2025 4:32:13 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[user_special_permissions](
@@ -19,3 +19,7 @@ CREATE TABLE [fmis].[user_special_permissions](
 ) ON [PRIMARY]
 
 ALTER TABLE [fmis].[user_special_permissions] ADD  DEFAULT (getdate()) FOR [created_at]
+ALTER TABLE [fmis].[user_special_permissions]  WITH CHECK ADD  CONSTRAINT [FK_UserSpecialPermissions_User] FOREIGN KEY([user_id])
+REFERENCES [fmis].[users] ([id])
+ON DELETE CASCADE
+ALTER TABLE [fmis].[user_special_permissions] CHECK CONSTRAINT [FK_UserSpecialPermissions_User]

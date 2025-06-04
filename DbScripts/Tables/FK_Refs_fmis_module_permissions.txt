@@ -1,0 +1,3 @@
+Column 'module_id' in table 'fmis.module_permissions' references
+        'fmis.modules'(id)
+        via foreign key 'FK_Permissions_Modules'.

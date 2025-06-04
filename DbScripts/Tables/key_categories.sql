@@ -1,4 +1,4 @@
-/****** Object:  Table [mwss].[key_categories]    Script Date: 6/4/2025 2:23:17 PM ******/
+/****** Object:  Table [mwss].[key_categories]    Script Date: 6/4/2025 4:32:13 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [mwss].[key_categories](

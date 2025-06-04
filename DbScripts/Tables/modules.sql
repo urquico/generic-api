@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[modules]    Script Date: 6/4/2025 2:23:06 PM ******/
+/****** Object:  Table [fmis].[modules]    Script Date: 6/4/2025 4:32:11 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[modules](

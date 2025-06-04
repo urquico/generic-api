@@ -22,3 +22,9 @@ Column 'grand_parent_id' in table 'fmis.modules' references
 Column 'parent_id' in table 'fmis.modules' references 
                         'fmis.modules'(id) 
                         via foreign key 'FK_Modules_Parent'.
+Column 'grand_parent_id' in table 'fmis.modules' references
+        'fmis.modules'(id)
+        via foreign key 'FK_Modules_GrandParent'.
+Column 'parent_id' in table 'fmis.modules' references
+        'fmis.modules'(id)
+        via foreign key 'FK_Modules_Parent'.

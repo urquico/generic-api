@@ -10,3 +10,9 @@ Column 'permission_id' in table 'fmis.role_module_permissions' references
 Column 'permission_id' in table 'fmis.role_module_permissions' references 
                         'fmis.module_permissions'(id) 
                         via foreign key 'FK_RolePermissions_Permissions'.
+Column 'permission_id' in table 'fmis.role_module_permissions' references
+        'fmis.module_permissions'(id)
+        via foreign key 'FK_RolePermissions_Permissions'.
+Column 'role_id' in table 'fmis.role_module_permissions' references
+        'fmis.roles'(id)
+        via foreign key 'FK_RolePermissions_Roles'.

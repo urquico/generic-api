@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[refresh_tokens]    Script Date: 6/4/2025 2:23:06 PM ******/
+/****** Object:  Table [fmis].[refresh_tokens]    Script Date: 6/4/2025 4:32:11 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[refresh_tokens](
@@ -21,3 +21,7 @@ CREATE TABLE [fmis].[refresh_tokens](
 
 ALTER TABLE [fmis].[refresh_tokens] ADD  DEFAULT (CONVERT([bit],(0))) FOR [is_revoked]
 ALTER TABLE [fmis].[refresh_tokens] ADD  DEFAULT (getutcdate()) FOR [created_at]
+ALTER TABLE [fmis].[refresh_tokens]  WITH CHECK ADD  CONSTRAINT [FK_RefreshTokens_Users] FOREIGN KEY([user_id])
+REFERENCES [fmis].[users] ([id])
+ON DELETE CASCADE
+ALTER TABLE [fmis].[refresh_tokens] CHECK CONSTRAINT [FK_RefreshTokens_Users]
