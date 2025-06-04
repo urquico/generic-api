@@ -138,10 +138,27 @@ namespace GenericApi.Controllers
 
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
+                var roleResponse = new GetSingleRoleResponseDto
+                {
+                    Id = role.Id,
+                    RoleName = role.RoleName,
+                    Status = role.RoleStatus == true ? "Active" : "Inactive",
+                    Permissions =
+                    [
+                        .. role.RoleModulePermissions.Select(rmp =>
+                            rmp.Permission?.PermissionName ?? "Unknown"
+                        ),
+                    ],
+                    DateCreated =
+                        role.CreatedAt != null
+                            ? role.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            : "Unknown",
+                };
+
                 return _response.Success(
                     statusCode: StatusCodes.Status200OK,
                     message: GetSingleRoleMessages.SUCCESS,
-                    data: null
+                    data: roleResponse
                 );
             }
             catch (Exception ex)
