@@ -303,6 +303,7 @@ namespace GenericApi.Controllers
             }
         }
 
+        // Helper methods to set cookies for access and refresh tokens
         private void SetRefreshAuthCookies(string refreshToken)
         {
             var expiration = _configuration.GetSection("Jwt")["RefreshTokenExpirationDays"] ?? "7";

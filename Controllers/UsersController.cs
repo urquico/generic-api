@@ -90,17 +90,6 @@ namespace GenericApi.Controllers
          *
          * @returns {IActionResult} 201 if password changed successfully, 500 if an error occurred.
          * @route PATCH /me/password
-         * @example response - 201 - Password changed successfully
-         * {
-         *   "statusCode": 201,
-         *   "message": "Password has been changed.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while changing the password."
-         * }
          */
         [HttpPatch("me/password")]
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
