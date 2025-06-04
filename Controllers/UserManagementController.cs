@@ -506,7 +506,7 @@ namespace GenericApi.Controllers
                     specialPermission: blockAccessDto,
                     loggedUser: loggedUser.Id,
                     ip: ip,
-                    accessStatus: true
+                    accessStatus: false
                 );
             }
             catch (Exception ex)
