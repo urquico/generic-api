@@ -213,36 +213,45 @@ namespace GenericApi.Controllers
          * @param userId The ID of the user to soft delete.
          * @returns {IActionResult} 200 if soft deletion is successful, 500 if an error occurred.
          * @route DELETE /{userId}
-         * @example response - 200 - User soft deleted successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User soft deleted successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while soft deleting the user."
-         * }
         */
         [HttpDelete("{userId}")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Soft delete user by ID.")]
-        public IActionResult SoftDeleteUserById([FromRoute] string userId)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.SOFT_DELETE_USER)]
+        public IActionResult SoftDeleteUserById([FromRoute] int userId)
         {
             try
             {
-                // TODO: Implement the logic for soft deleting user by ID
+                // check if the user exists
+                var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(SoftDeletedMessages.USER_NOT_FOUND)
+                    );
+                }
 
-                const string activity = "User soft deleted successfully.";
+                var loggedUser = _tokenService.GetUserFromAccessToken(
+                    HttpContext.Request.Cookies["accessToken"] ?? ""
+                );
+
+                // soft delete the user
+                user.DeletedAt = DateTime.UtcNow;
+                user.DeletedBy = loggedUser?.Id ?? 0;
+                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedBy = loggedUser?.Id ?? 0;
+                _context.Users.Update(user);
+                _context.SaveChanges();
+
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(SoftDeletedMessages.ACTIVITY, user.Email),
                     ip: ip,
-                    message: activity,
+                    message: SoftDeletedMessages.SUCCESS,
                     data: null
                 );
             }
