@@ -485,9 +485,11 @@ namespace GenericApi.Controllers
          * @route POST /{userId}/access/block
         */
         [HttpPost("{userId}/access/block")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Block user access by ID.")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.BLOCK_USER_ACCESS)]
         public IActionResult BlockUserAccessById(
             [FromRoute] int userId,
             [FromBody] BlockUserAccessRequestDto blockAccessDto
