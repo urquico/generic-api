@@ -322,42 +322,43 @@ namespace GenericApi.Controllers
          * @param userId The ID of the user to force delete.
          * @returns {IActionResult} 200 if force deletion is successful, 500 if an error occurred.
          * @route DELETE /{userId}/force
-         * @example response - 200 - User force deleted successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User force deleted successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while force deleting the user."
-         * }
         */
         [HttpDelete("{userId}/force")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Force delete user by ID.")]
-        public IActionResult ForceDeleteUserById([FromRoute] string userId)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.FORCE_DELETE_USER)]
+        public IActionResult ForceDeleteUserById([FromRoute] int userId)
         {
             try
             {
-                // TODO: Implement the logic for force deleting user by ID
+                // check if the user exists
+                var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(ForceDeleteMessages.USER_NOT_FOUND)
+                    );
+                }
 
-                const string activity = "User force deleted successfully.";
+                // force delete the user
+                _context.Users.Remove(user);
+                _context.SaveChanges();
+
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(ForceDeleteMessages.ACTIVITY, user.Email),
                     ip: ip,
-                    message: activity,
+                    message: ForceDeleteMessages.SUCCESS,
                     data: null
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
