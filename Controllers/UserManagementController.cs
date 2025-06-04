@@ -257,7 +257,62 @@ namespace GenericApi.Controllers
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
+            }
+        }
+
+        /**
+         * Restore user by ID endpoint allows restoring a soft-deleted user by their ID.
+         *
+         * @param userId The ID of the user to restore.
+         * @returns {IActionResult} 200 if restoration is successful, 500 if an error occurred.
+         * @route PATCH /{userId}/restore
+         * @example response - 200 - User restored successfully
+        */
+        [HttpPatch("{userId}/restore")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.RESTORE_USER)]
+        public IActionResult RestoreUserById([FromRoute] int userId)
+        {
+            try
+            {
+                // check if the user exists
+                var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null || user.DeletedAt == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(RestoreUserMessages.USER_NOT_FOUND)
+                    );
+                }
+
+                var loggedUser = _tokenService.GetUserFromAccessToken(
+                    HttpContext.Request.Cookies["accessToken"] ?? ""
+                );
+
+                // restore the user
+                user.DeletedAt = null;
+                user.DeletedBy = null;
+                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedBy = loggedUser?.Id ?? 0;
+                _context.Users.Update(user);
+                _context.SaveChanges();
+
+                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+
+                return _response.Success(
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(RestoreUserMessages.ACTIVITY, user.Email),
+                    ip: ip,
+                    message: RestoreUserMessages.SUCCESS,
+                    data: null
+                );
+            }
+            catch (Exception ex)
+            {
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
