@@ -5,5 +5,8 @@ using System.Threading.Tasks;
 
 namespace GenericApi.Dtos.UserManagement
 {
-    public class BlockUserAccessRequestDto : SpecialPermissionRequestDto { }
+    public class SpecialPermissionRequestDto
+    {
+        public required int PermissionId { get; set; }
+    }
 }

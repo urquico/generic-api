@@ -483,40 +483,30 @@ namespace GenericApi.Controllers
          * @param blockAccessDto The request body containing access block data.
          * @returns {IActionResult} 200 if blocking is successful, 500 if an error occurred.
          * @route POST /{userId}/access/block
-         * @example response - 200 - User access blocked successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User access blocked successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while blocking user access."
-         * }
         */
         [HttpPost("{userId}/access/block")]
         [ProducesResponseType(typeof(void), 200)]
         [ProducesResponseType(typeof(object), 500)]
         [SwaggerOperation(Summary = "Block user access by ID.")]
         public IActionResult BlockUserAccessById(
-            [FromRoute] string userId,
-            [FromBody] BlockUserAccessRequestDto[] blockAccessDto
+            [FromRoute] int userId,
+            [FromBody] BlockUserAccessRequestDto blockAccessDto
         )
         {
             try
             {
-                // TODO: Implement the logic for blocking user access by ID
+                var loggedUser = _tokenService.GetUserFromAccessToken(
+                    HttpContext.Request.Cookies["accessToken"] ?? ""
+                );
 
-                const string activity = "User access blocked successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                return _usersService.CreateSpecialPermission(
+                    userId: userId,
+                    specialPermission: blockAccessDto,
+                    loggedUser: loggedUser.Id,
                     ip: ip,
-                    message: activity,
-                    data: null
+                    accessStatus: true
                 );
             }
             catch (Exception ex)
@@ -532,45 +522,37 @@ namespace GenericApi.Controllers
          * @param grantAccessDto The request body containing access grant data.
          * @returns {IActionResult} 200 if granting is successful, 500 if an error occurred.
          * @route POST /{userId}/access/permission
-         * @example response - 200 - User access granted successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User access granted successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while granting user access."
-         * }
         */
         [HttpPost("{userId}/access/permission")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Grant user access by ID.")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.GRANT_USER_ACCESS)]
         public IActionResult GrantUserAccessById(
-            [FromRoute] string userId,
-            [FromBody] GrantUserAccessRequestDto[] grantAccessDto
+            [FromRoute] int userId,
+            [FromBody] GrantUserAccessRequestDto grantAccessDto
         )
         {
             try
             {
-                // TODO: Implement the logic for granting user access by ID
+                var loggedUser = _tokenService.GetUserFromAccessToken(
+                    HttpContext.Request.Cookies["accessToken"] ?? ""
+                );
 
-                const string activity = "User access granted successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                return _usersService.CreateSpecialPermission(
+                    userId: userId,
+                    specialPermission: grantAccessDto,
+                    loggedUser: loggedUser.Id,
                     ip: ip,
-                    message: activity,
-                    data: null
+                    accessStatus: true
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
     }

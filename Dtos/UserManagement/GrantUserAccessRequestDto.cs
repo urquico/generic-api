@@ -5,5 +5,5 @@ using System.Threading.Tasks;
 
 namespace GenericApi.Dtos.UserManagement
 {
-    public class GrantUserAccessRequestDto { }
+    public class GrantUserAccessRequestDto : SpecialPermissionRequestDto { }
 }
