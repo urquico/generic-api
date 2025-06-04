@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GenericApi.Dtos;
 using GenericApi.Dtos.RolesManagement;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
@@ -32,23 +33,76 @@ namespace GenericApi.Controllers
          * @route GET /all
         */
         [HttpGet("all")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        public IActionResult GetAllRoles([FromQuery] string query)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = RoleSummary.GET_ALL)]
+        public IActionResult GetAllRoles([FromQuery] GetAllRolesQueryDto query)
         {
             try
             {
-                // TODO: Implement the logic to retrieve all roles
+                // Retrieve all roles from the database, optionally filtered by query
+                var rolesQuery = _context
+                    .Roles.Include(r => r.RoleModulePermissions)
+                    .ThenInclude(rmp => rmp.Permission)
+                    .AsQueryable();
+
+                if (query.includeDeleted == 1)
+                {
+                    rolesQuery = rolesQuery.Where(r => r.DeletedAt != null || r.DeletedAt == null);
+                }
+                else
+                {
+                    rolesQuery = rolesQuery.Where(r => r.DeletedAt == null);
+                }
+
+                var roles = rolesQuery
+                    .Select(r => new
+                    {
+                        r.Id,
+                        r.RoleName,
+                        Status = r.RoleStatus == true ? "Active" : "Inactive",
+                        Permissions = r
+                            .RoleModulePermissions.Select(rmp => new
+                            {
+                                rmp.PermissionId,
+                                PermissionName = rmp.Permission.PermissionName ?? "Unknown",
+                            })
+                            .ToList(),
+                        DateCreated = r.CreatedAt,
+                    })
+                    .ToList();
+
+                var parsedRoles = roles
+                    .Select(r => new GetAllRolesResponseDto
+                    {
+                        Id = r.Id,
+                        RoleName = r.RoleName,
+                        Status = r.Status,
+                        Permissions = [.. r.Permissions.Select(p => p.PermissionName)],
+                        DateCreated =
+                            r.DateCreated != null
+                                ? r.DateCreated.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                                : "Unknown",
+                    })
+                    .ToArray();
+
+                var response = new PaginationResponseDto<GetAllRolesResponseDto[]>
+                {
+                    Items = [parsedRoles],
+                    TotalCount = roles.Count,
+                    CurrentPage = 0,
+                    TotalPages = 1,
+                };
 
                 const string activity = "Roles have been retrieved successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 200,
+                    statusCode: StatusCodes.Status200OK,
                     activity: activity,
                     ip: ip,
                     message: activity,
-                    data: null
+                    data: response
                 );
             }
             catch (Exception ex)

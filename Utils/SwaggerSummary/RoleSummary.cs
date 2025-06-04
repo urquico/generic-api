@@ -9,5 +9,6 @@ namespace GenericApi.Utils.SwaggerSummary
     {
         public const string CREATE = "Create a new role with permissions";
         public const string UPDATE = "Update an existing role with permissions";
+        public const string GET_ALL = "Get all roles with pagination";
     }
 }
