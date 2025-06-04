@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
+using GenericApi.Dtos.UserManagement;
 using GenericApi.Models;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
@@ -231,6 +232,86 @@ namespace GenericApi.Services.Users
                 statusCode: StatusCodes.Status200OK,
                 message: GetUserMessages.SUCCESS,
                 data: user
+            );
+        }
+
+        public IActionResult CreateSpecialPermission(
+            int userId,
+            SpecialPermissionRequestDto specialPermission,
+            int loggedUser,
+            string ip,
+            bool accessStatus
+        )
+        {
+            // check if the user exists
+            var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+            if (user == null)
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status404NotFound,
+                    e: new Exception(UserSpecialPermissionMessages.USER_NOT_FOUND)
+                );
+            }
+
+            // check if the permission exists
+            var permission = _context.ModulePermissions.FirstOrDefault(p =>
+                p.Id == specialPermission.PermissionId
+            );
+            if (permission == null)
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status404NotFound,
+                    e: new Exception(UserSpecialPermissionMessages.PERMISSION_NOT_FOUND)
+                );
+            }
+
+            // check if the user already has the permission
+            var existingPermission = _context.UserSpecialPermissions.FirstOrDefault(usp =>
+                usp.UserId == userId && usp.PermissionId == specialPermission.PermissionId
+            );
+            if (existingPermission != null)
+            {
+                return _response.Error(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    e: new Exception(
+                        string.Format(
+                            UserSpecialPermissionMessages.PERMISSION_ALREADY_EXISTS,
+                            permission.PermissionName
+                        )
+                    )
+                );
+            }
+
+            // grant the permission to the user
+            var userPermission = new UserSpecialPermission
+            {
+                UserId = userId,
+                PermissionId = specialPermission.PermissionId,
+                AccessStatus = accessStatus,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = loggedUser,
+                UpdatedAt = DateTime.UtcNow,
+                UpdatedBy = loggedUser,
+            };
+            _context.UserSpecialPermissions.Add(userPermission);
+            _context.SaveChanges();
+
+            return _response.Success(
+                statusCode: StatusCodes.Status200OK,
+                activity: accessStatus
+                    ? string.Format(
+                        UserSpecialPermissionMessages.ACTIVITY_GRANTED,
+                        user.Email,
+                        permission.PermissionName
+                    )
+                    : string.Format(
+                        UserSpecialPermissionMessages.ACTIVITY_REVOKED,
+                        user.Email,
+                        permission.PermissionName
+                    ),
+                ip: ip,
+                message: UserSpecialPermissionMessages.SUCCESS,
+                data: null
             );
         }
     }
