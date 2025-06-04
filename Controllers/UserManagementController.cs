@@ -213,42 +213,106 @@ namespace GenericApi.Controllers
          * @param userId The ID of the user to soft delete.
          * @returns {IActionResult} 200 if soft deletion is successful, 500 if an error occurred.
          * @route DELETE /{userId}
-         * @example response - 200 - User soft deleted successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User soft deleted successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while soft deleting the user."
-         * }
         */
         [HttpDelete("{userId}")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Soft delete user by ID.")]
-        public IActionResult SoftDeleteUserById([FromRoute] string userId)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.SOFT_DELETE_USER)]
+        public IActionResult SoftDeleteUserById([FromRoute] int userId)
         {
             try
             {
-                // TODO: Implement the logic for soft deleting user by ID
+                // check if the user exists
+                var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(SoftDeletedMessages.USER_NOT_FOUND)
+                    );
+                }
 
-                const string activity = "User soft deleted successfully.";
+                var loggedUser = _tokenService.GetUserFromAccessToken(
+                    HttpContext.Request.Cookies["accessToken"] ?? ""
+                );
+
+                // soft delete the user
+                user.DeletedAt = DateTime.UtcNow;
+                user.DeletedBy = loggedUser?.Id ?? 0;
+                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedBy = loggedUser?.Id ?? 0;
+                _context.Users.Update(user);
+                _context.SaveChanges();
+
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(SoftDeletedMessages.ACTIVITY, user.Email),
                     ip: ip,
-                    message: activity,
+                    message: SoftDeletedMessages.SUCCESS,
                     data: null
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
+            }
+        }
+
+        /**
+         * Restore user by ID endpoint allows restoring a soft-deleted user by their ID.
+         *
+         * @param userId The ID of the user to restore.
+         * @returns {IActionResult} 200 if restoration is successful, 500 if an error occurred.
+         * @route PATCH /{userId}/restore
+         * @example response - 200 - User restored successfully
+        */
+        [HttpPatch("{userId}/restore")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.RESTORE_USER)]
+        public IActionResult RestoreUserById([FromRoute] int userId)
+        {
+            try
+            {
+                // check if the user exists
+                var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null || user.DeletedAt == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(RestoreUserMessages.USER_NOT_FOUND)
+                    );
+                }
+
+                var loggedUser = _tokenService.GetUserFromAccessToken(
+                    HttpContext.Request.Cookies["accessToken"] ?? ""
+                );
+
+                // restore the user
+                user.DeletedAt = null;
+                user.DeletedBy = null;
+                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedBy = loggedUser?.Id ?? 0;
+                _context.Users.Update(user);
+                _context.SaveChanges();
+
+                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+
+                return _response.Success(
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(RestoreUserMessages.ACTIVITY, user.Email),
+                    ip: ip,
+                    message: RestoreUserMessages.SUCCESS,
+                    data: null
+                );
+            }
+            catch (Exception ex)
+            {
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
@@ -258,42 +322,43 @@ namespace GenericApi.Controllers
          * @param userId The ID of the user to force delete.
          * @returns {IActionResult} 200 if force deletion is successful, 500 if an error occurred.
          * @route DELETE /{userId}/force
-         * @example response - 200 - User force deleted successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "User force deleted successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while force deleting the user."
-         * }
         */
         [HttpDelete("{userId}/force")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        [SwaggerOperation(Summary = "Force delete user by ID.")]
-        public IActionResult ForceDeleteUserById([FromRoute] string userId)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = UsersSummary.FORCE_DELETE_USER)]
+        public IActionResult ForceDeleteUserById([FromRoute] int userId)
         {
             try
             {
-                // TODO: Implement the logic for force deleting user by ID
+                // check if the user exists
+                var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(ForceDeleteMessages.USER_NOT_FOUND)
+                    );
+                }
 
-                const string activity = "User force deleted successfully.";
+                // force delete the user
+                _context.Users.Remove(user);
+                _context.SaveChanges();
+
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
+                    statusCode: StatusCodes.Status200OK,
+                    activity: string.Format(ForceDeleteMessages.ACTIVITY, user.Email),
                     ip: ip,
-                    message: activity,
+                    message: ForceDeleteMessages.SUCCESS,
                     data: null
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
