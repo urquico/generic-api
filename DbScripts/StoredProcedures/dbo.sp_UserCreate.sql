@@ -1,8 +1,8 @@
-/****** Object:  StoredProcedure [dbo].[sp_CreateUser]    Script Date: 6/3/2025 3:19:54 PM ******/
+/****** Object:  StoredProcedure [dbo].[sp_UserCreate]    Script Date: 6/4/2025 3:22:03 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 
-CREATE PROCEDURE sp_CreateUser
+CREATE PROCEDURE [dbo].[sp_UserCreate]
     @Email NVARCHAR(255),
     @HashedPassword NVARCHAR(255),
     @FirstName NVARCHAR(100),

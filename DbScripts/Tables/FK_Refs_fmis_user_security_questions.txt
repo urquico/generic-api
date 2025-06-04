@@ -1,12 +1,9 @@
-Column 'user_id' in table 'fmis.user_security_questions' references 
-'fmis.users'(id) 
-via foreign key 'FK_UserSecurityQuestions_User'.
 Column 'security_question_id' in table 'fmis.user_security_questions' references 
-'fmis.security_questions'(id) 
-via foreign key 'FK_UserSecurityQuestions_SecurityQuestions'.
-Column 'user_id' in table 'fmis.user_security_questions' references 
-'fmis.users'(id) 
-via foreign key 'FK_UserSecurityQuestions_User'.
+                        'fmis.security_questions'(id) 
+                        via foreign key 'FK_UserSecurityQuestions_SecurityQuestions'.
 Column 'security_question_id' in table 'fmis.user_security_questions' references 
-'fmis.security_questions'(id) 
-via foreign key 'FK_UserSecurityQuestions_SecurityQuestions'.
+                        'fmis.security_questions'(id) 
+                        via foreign key 'FK_UserSecurityQuestions_SecurityQuestions'.
+Column 'security_question_id' in table 'fmis.user_security_questions' references 
+                        'fmis.security_questions'(id) 
+                        via foreign key 'FK_UserSecurityQuestions_SecurityQuestions'.

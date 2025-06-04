@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using GenericApi.Models;
 using GenericApi.Seed;
 using GenericApi.Services.Auth;
@@ -20,6 +21,10 @@ if (useDevSettings)
         optional: true,
         reloadOnChange: true
     );
+}
+else
+{
+    builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 }
 
 // Configure AppDbContext with SQL Server
@@ -137,7 +142,7 @@ if (args.Contains("--seed"))
 }
 if (args.Contains("--export"))
 {
-    await DbScriptManager.ExportScriptsAsync(app.Services);
+    DbScriptManager.ExportScripts(app.Services);
     return;
 }
 

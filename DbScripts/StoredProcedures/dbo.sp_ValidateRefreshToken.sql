@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [dbo].[sp_ValidateRefreshToken]    Script Date: 6/3/2025 9:34:34 AM ******/
+/****** Object:  StoredProcedure [dbo].[sp_ValidateRefreshToken]    Script Date: 6/4/2025 3:22:11 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 
