@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Dtos.UserManagement;
@@ -9,6 +11,8 @@ using GenericApi.Utils;
 using GenericApi.Utils.Auth;
 using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace GenericApi.Services.Users
 {
@@ -18,94 +22,74 @@ namespace GenericApi.Services.Users
         private readonly CustomSuccess _response = new();
         private readonly IConfiguration _configuration = configuration;
 
-        public IActionResult CreateUser(SignupRequestDto createUser, int? userId, string ip)
+        public async Task<(int, string?, CreateUserResponseDto?)> CreateUser(
+            SignupRequestDto createUser,
+            int? userId
+        )
         {
-            // Check if the email already exists
-            var existingUser = _context.Users.FirstOrDefault(u => u.Email == createUser.Email);
-            if (existingUser != null)
+            // convert [1, 2] to "1,2" for SQL parameter
+            var parsedRoles = string.Join(",", createUser.UserRoles.Select(r => r.ToString()));
+
+            var email = new SqlParameter("@Email", createUser.Email);
+            var password = new SqlParameter("@Password", createUser.Password);
+            var confirmPassword = new SqlParameter("@ConfirmPassword", createUser.ConfirmPassword);
+            var hashedPassword = new SqlParameter(
+                "@HashedPassword",
+                GenerateHashedPassword(createUser.Password)
+            );
+            var firstName = new SqlParameter("@FirstName", createUser.FirstName);
+            var middleName = new SqlParameter("@MiddleName", createUser.MiddleName);
+            var lastName = new SqlParameter("@LastName", createUser.LastName);
+            var createdBy = new SqlParameter("@CreatedBy", userId ?? (object)DBNull.Value);
+            var userRoleIds = new SqlParameter("@UserRoleIds", parsedRoles);
+
+            var statusCode = new SqlParameter("@StatusCode", SqlDbType.Int)
             {
-                return _response.Error(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    e: new Exception(SignupMessages.EMAIL_ALREADY_EXISTS),
-                    saveLog: true
-                );
-            }
+                Direction = ParameterDirection.Output,
+            };
 
-            // Check if password and confirm password match
-            if (createUser.Password != createUser.ConfirmPassword)
+            var message = new SqlParameter("@Message", SqlDbType.NVarChar, 255)
             {
-                return _response.Error(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    e: new Exception(SignupMessages.PASSWORD_CONFIRMATION_MISMATCH),
-                    saveLog: true
-                );
-            }
+                Direction = ParameterDirection.Output,
+            };
 
-            var hashedPassword = GenerateHashedPassword(createUser.Password);
-
-            // Check if the createUser.UserRoles is empty, null, or contains 0
-            if (
-                createUser.UserRoles == null
-                || createUser.UserRoles.Count == 0
-                || createUser.UserRoles.Contains(0)
-            )
+            var data = new SqlParameter("@Data", SqlDbType.NVarChar, -1) // -1 for MAX
             {
-                return _response.Error(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    e: new Exception(SignupMessages.USER_ROLES_EMPTY),
-                    saveLog: true
-                );
-            }
+                Direction = ParameterDirection.Output,
+            };
 
-            // save the new user to the database
-            var insertedUser = _context.Users.Add(
-                new User
-                {
-                    Email = createUser.Email,
-                    Password = hashedPassword,
-                    FirstName = createUser.FirstName,
-                    MiddleName = createUser.MiddleName,
-                    LastName = createUser.LastName,
-                    StatusId = 1,
-                    UserRoles =
-                    [
-                        .. createUser.UserRoles.Select(roleId => new UserRole
-                        {
-                            RoleId = roleId,
-                            CreatedAt = DateTime.UtcNow,
-                            CreatedBy = userId,
-                            UpdatedAt = DateTime.UtcNow,
-                        }),
-                    ],
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = userId,
-                    UpdatedAt = DateTime.UtcNow,
-                }
+            await _context.Database.ExecuteSqlRawAsync(
+                "EXEC fmis.sp_create_user @Email, @Password, @ConfirmPassword, @HashedPassword, @FirstName, @MiddleName, @LastName, @CreatedBy, @UserRoleIds, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                email,
+                password,
+                confirmPassword,
+                hashedPassword,
+                firstName,
+                middleName,
+                lastName,
+                createdBy,
+                userRoleIds,
+                statusCode,
+                message,
+                data
             );
 
-            _context.SaveChanges();
-
-            return _response.Success(
-                statusCode: StatusCodes.Status201Created,
-                activity: string.Format(
-                    SignupMessages.SIGNUP_ACTIVITY_LOG,
-                    insertedUser.Entity.Email
-                ),
-                ip: ip,
-                message: SignupMessages.SUCCESS_SIGNUP,
-                data: new
+            var userDataJson = data.Value?.ToString();
+            CreateUserResponseDto? userObj = null;
+            if (!string.IsNullOrWhiteSpace(userDataJson))
+            {
+                userObj = JsonSerializer.Deserialize<CreateUserResponseDto>(userDataJson);
+                // Convert from UTC to UTC+8 (Asia/Manila) if userObj is not null
+                if (userObj != null)
                 {
-                    insertedUser.Entity.Id,
-                    insertedUser.Entity.Email,
-                    insertedUser.Entity.FirstName,
-                    insertedUser.Entity.LastName,
-                    Value = insertedUser.Entity.UserRoles.Select(ur => new
-                    {
-                        ur.RoleId,
-                        _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
-                    }),
+                    userObj.CreatedAt = TimeZoneInfo.ConvertTimeFromUtc(
+                        userObj.CreatedAt,
+                        TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila") // UTC+8 Standard Time
+                    );
                 }
-            );
+            }
+
+            return ((int)statusCode.Value, message.Value?.ToString(), userObj);
         }
 
         public IActionResult ChangePassword(int userId, string password, string ip)

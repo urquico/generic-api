@@ -13,10 +13,10 @@ namespace GenericApi.Utils.Auth
         public const string PASSWORD_CONFIRMATION_MISMATCH =
             "Password confirmation does not match the password.";
 
-        public const string SUCCESS_SIGNUP =
+        public const string SUCCESS =
             "Signup successful. Please check your email to verify your account.";
 
-        public const string SIGNUP_ACTIVITY_LOG = "User signed up with email: {0}";
+        public const string ACTIVITY = "User signed up with email: {0}";
         public const string USER_ROLES_EMPTY =
             "User roles cannot be empty. Please select at least one role.";
     }

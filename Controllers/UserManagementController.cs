@@ -8,6 +8,7 @@ using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Services.Users;
 using GenericApi.Utils;
+using GenericApi.Utils.Auth;
 using GenericApi.Utils.SwaggerSummary;
 using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -155,9 +156,10 @@ namespace GenericApi.Controllers
         [PermissionAuthorize("Admin.CanCreateUser")]
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.CREATE_USER)]
-        public IActionResult CreateUser([FromBody] CreateUserRequestDto createUserDto)
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequestDto createUserDto)
         {
             try
             {
@@ -165,10 +167,26 @@ namespace GenericApi.Controllers
                 var loggedUser = _tokenService.GetUserFromAccessToken(accessToken);
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _usersService.CreateUser(
-                    createUser: createUserDto,
-                    userId: loggedUser.Id,
-                    ip: ip
+                var (statusCode, message, data) = await _usersService.CreateUser(
+                    createUserDto,
+                    userId: loggedUser?.Id ?? 0
+                );
+
+                if (statusCode >= 400)
+                {
+                    return _response.Error(
+                        statusCode: statusCode,
+                        e: new Exception(message),
+                        saveLog: true
+                    );
+                }
+
+                return _response.Success(
+                    statusCode: statusCode,
+                    activity: string.Format(SignupMessages.ACTIVITY, createUserDto.Email),
+                    ip: ip,
+                    message: message,
+                    data: data
                 );
             }
             catch (Exception ex)
