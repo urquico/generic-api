@@ -1,3 +1,0 @@
-Column 'user_id' in table 'fmis.user_special_permissions' references
-        'fmis.users'(id)
-        via foreign key 'FK_UserSpecialPermissions_User'.
