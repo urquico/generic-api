@@ -19,13 +19,10 @@ namespace GenericApi.Services.Users
     public class UsersService(IConfiguration configuration)
     {
         private readonly AppDbContext _context = new();
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly IConfiguration _configuration = configuration;
 
-        public async Task<(int, string?, CreateUserResponseDto?)> CreateUser(
-            SignupRequestDto createUser,
-            int? userId
-        )
+        public async Task<IActionResult> CreateUser(SignupRequestDto createUser, int? userId)
         {
             // convert [1, 2] to "1,2" for SQL parameter
             var parsedRoles = string.Join(",", createUser.UserRoles.Select(r => r.ToString()));
@@ -89,7 +86,24 @@ namespace GenericApi.Services.Users
                 }
             }
 
-            return ((int)statusCode.Value, message.Value?.ToString(), userObj);
+            var _statusCode = (int)statusCode.Value;
+            var _message = message.Value?.ToString();
+
+            if (_statusCode >= StatusCodes.Status400BadRequest)
+            {
+                return _response.Error(
+                    statusCode: _statusCode,
+                    e: new Exception(_message),
+                    saveLog: true
+                );
+            }
+
+            return _response.Success(
+                statusCode: _statusCode,
+                activity: string.Format(SignupMessages.ACTIVITY, userObj?.Email ?? string.Empty),
+                message: SignupMessages.SUCCESS,
+                data: userObj
+            );
         }
 
         public IActionResult ChangePassword(int userId, string password, string ip)

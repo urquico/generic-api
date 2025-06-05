@@ -25,7 +25,7 @@ namespace GenericApi.Controllers
         IConfiguration configuration
     ) : ControllerBase
     {
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly TokenService _tokenService = tokenService;
         private readonly UsersService _usersService = usersService;
         private readonly IConfiguration _configuration = configuration;

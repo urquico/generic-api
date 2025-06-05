@@ -27,7 +27,7 @@ namespace GenericApi.Controllers
         IConfiguration configuration
     ) : ControllerBase
     {
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly UsersService _usersService = usersService;
         private readonly TokenService _tokenService = tokenService;
         private readonly AppDbContext _context = new();
@@ -165,29 +165,8 @@ namespace GenericApi.Controllers
             {
                 var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
                 var loggedUser = _tokenService.GetUserFromAccessToken(accessToken);
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                var (statusCode, message, data) = await _usersService.CreateUser(
-                    createUserDto,
-                    userId: loggedUser?.Id ?? 0
-                );
-
-                if (statusCode >= 400)
-                {
-                    return _response.Error(
-                        statusCode: statusCode,
-                        e: new Exception(message),
-                        saveLog: true
-                    );
-                }
-
-                return _response.Success(
-                    statusCode: statusCode,
-                    activity: string.Format(SignupMessages.ACTIVITY, createUserDto.Email),
-                    ip: ip,
-                    message: message,
-                    data: data
-                );
+                return await _usersService.CreateUser(createUserDto, userId: loggedUser.Id);
             }
             catch (Exception ex)
             {

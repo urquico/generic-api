@@ -22,7 +22,7 @@ namespace GenericApi.Controllers
     [SwaggerTag("Roles Management")]
     public class RolesManagementController(TokenService tokenService) : ControllerBase
     {
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly AppDbContext _context = new();
 
         private readonly TokenService _tokenService = tokenService;

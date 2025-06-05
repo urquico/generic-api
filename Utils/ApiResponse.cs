@@ -4,11 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Serilog;
 
 namespace GenericApi.Utils
 {
-    public class CustomSuccess : ControllerBase
+    public class ApiResponse(IHttpContextAccessor httpContextAccessor) : ControllerBase
     {
         private readonly Serilog.ILogger _logger = Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -20,6 +21,8 @@ namespace GenericApi.Utils
             )
             .CreateLogger();
 
+        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+
         public ObjectResult Success(
             int statusCode,
             string activity = "",
@@ -28,6 +31,12 @@ namespace GenericApi.Utils
             object? data = null
         )
         {
+            // If ip is not provided, get it from HttpContext
+            if (string.IsNullOrEmpty(ip) && _httpContextAccessor.HttpContext != null)
+            {
+                ip = _httpContextAccessor.HttpContext.Connection.RemoteIpAddress?.ToString();
+            }
+
             var response = new
             {
                 StatusCode = statusCode,
@@ -64,6 +73,16 @@ namespace GenericApi.Utils
 
             var result = new ObjectResult(response) { StatusCode = statusCode };
             return result;
+        }
+
+        internal IActionResult Success(
+            SqlParameter statusCode,
+            string activity,
+            string message,
+            SqlParameter data
+        )
+        {
+            throw new NotImplementedException();
         }
     }
 }

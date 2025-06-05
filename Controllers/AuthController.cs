@@ -22,7 +22,7 @@ namespace GenericApi.Controllers
         UsersService usersService
     ) : ControllerBase
     {
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly TokenService _tokenService = tokenService;
         private readonly AppDbContext _context = new();
         private readonly IConfiguration _configuration = configuration;
@@ -46,29 +46,7 @@ namespace GenericApi.Controllers
         {
             try
             {
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
-
-                var (statusCode, message, data) = await _usersService.CreateUser(
-                    signupRequestDto,
-                    userId: null
-                );
-
-                if (statusCode >= 400)
-                {
-                    return _response.Error(
-                        statusCode: statusCode,
-                        e: new Exception(message),
-                        saveLog: true
-                    );
-                }
-
-                return _response.Success(
-                    statusCode: statusCode,
-                    activity: string.Format(SignupMessages.ACTIVITY, signupRequestDto.Email),
-                    ip: ip,
-                    message: SignupMessages.SUCCESS,
-                    data: data
-                );
+                return await _usersService.CreateUser(signupRequestDto, userId: null);
             }
             catch (Exception ex)
             {
