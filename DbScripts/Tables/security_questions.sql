@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[security_questions]    Script Date: 6/3/2025 3:18:42 PM ******/
+/****** Object:  Table [fmis].[security_questions]    Script Date: 6/4/2025 4:32:12 PM ******/
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 CREATE TABLE [fmis].[security_questions](

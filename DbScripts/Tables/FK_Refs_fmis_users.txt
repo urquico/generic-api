@@ -1,6 +1,3 @@
-Column 'status_id' in table 'fmis.users' references 
-'mwss.key_categories'(id) 
-via foreign key 'FK_Users_StatusKeyCategory'.
-Column 'status_id' in table 'fmis.users' references 
-'mwss.key_categories'(id) 
-via foreign key 'FK_Users_StatusKeyCategory'.
+Column 'status_id' in table 'fmis.users' references
+        'mwss.key_categories'(id)
+        via foreign key 'FK_Users_StatusKeyCategory'.

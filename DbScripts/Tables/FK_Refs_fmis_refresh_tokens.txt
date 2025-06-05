@@ -1,6 +1,3 @@
-Column 'user_id' in table 'fmis.refresh_tokens' references 
-'fmis.users'(id) 
-via foreign key 'FK_RefreshTokens_Users'.
-Column 'user_id' in table 'fmis.refresh_tokens' references 
-'fmis.users'(id) 
-via foreign key 'FK_RefreshTokens_Users'.
+Column 'user_id' in table 'fmis.refresh_tokens' references
+        'fmis.users'(id)
+        via foreign key 'FK_RefreshTokens_Users'.
