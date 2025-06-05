@@ -5,6 +5,21 @@ using Microsoft.SqlServer.Management.Smo;
 
 public static class DbScriptManager
 {
+    private static readonly string[] TableDefaultOrder =
+    [
+        "mwss.key_categories.sql",
+        "fmis.security_questions.sql",
+        "fmis.modules.sql",
+        "fmis.module_permissions.sql",
+        "fmis.roles.sql",
+        "fmis.role_module_permissions.sql",
+        "fmis.users.sql",
+        "fmis.user_roles.sql",
+        "fmis.user.security_questions.sql",
+        "fmis.user_special_permissions.sql",
+        "fmis.refresh_tokens.sql",
+    ];
+
     //<summary>
     /// Exports database objects (tables, stored procedures, views) to SQL scripts.
     public static void ExportScripts(IServiceProvider services)
@@ -63,49 +78,206 @@ public static class DbScriptManager
 
             try
             {
-                var scriptingOptions = new ScriptingOptions
+                var now = DateTime.Now;
+                var scriptDate = now.ToString("M/d/yyyy h:mm:ss tt");
+                var tableFile = Path.Combine(tablesPath, $"{table.Schema}.{table.Name}.sql");
+                var sb = new System.Text.StringBuilder();
+
+                sb.AppendLine(
+                    $"/****** Object:  Table [{table.Schema}].[{table.Name}]    Script Date: {scriptDate} ******/"
+                );
+                sb.AppendLine("SET ANSI_NULLS ON");
+                sb.AppendLine("GO");
+                sb.AppendLine();
+                sb.AppendLine("SET QUOTED_IDENTIFIER ON");
+                sb.AppendLine("GO");
+                sb.AppendLine();
+
+                // Script CREATE TABLE with PK (but no FKs, no defaults, no checks, no uniques, no indexes)
+                var so = new ScriptingOptions
                 {
                     ScriptDrops = false,
                     WithDependencies = false,
-                    IncludeHeaders = true,
+                    IncludeHeaders = false,
                     SchemaQualify = true,
-                    Indexes = true,
-                    DriAll = true,
-                    Triggers = true,
+                    Indexes = false,
+                    DriAll = false,
+                    Triggers = false,
                     ScriptDataCompression = true,
                     ScriptOwner = false,
                     NoCollation = false,
+                    DriPrimaryKey = true, // include PK in CREATE TABLE
+                    DriClustered = true,
+                    DriNonClustered = true,
                 };
-
-                var scriptCollection = table.Script(scriptingOptions);
-                string rawScript = string.Join(
-                    Environment.NewLine,
-                    scriptCollection.Cast<string>()
-                );
-                string cleanedScript = Regex.Replace(
-                    rawScript,
-                    @"\s+COLLATE\s+\w+",
-                    "",
-                    RegexOptions.IgnoreCase
-                );
-
-                File.WriteAllText(Path.Combine(tablesPath, $"{table.Name}.sql"), cleanedScript);
-
-                foreach (ForeignKey fk in table.ForeignKeys)
+                var createTableScript = table.Script(so);
+                if (createTableScript != null)
                 {
-                    foreach (ForeignKeyColumn fkCol in fk.Columns)
+                    foreach (var line in createTableScript)
                     {
-                        string refDetails =
-                            $@"Column '{fkCol.Name}' in table '{table.Schema}.{table.Name}' references
-        '{fk.ReferencedTableSchema}.{fk.ReferencedTable}'({fkCol.ReferencedColumn})
-        via foreign key '{fk.Name}'.";
-
-                        File.AppendAllText(
-                            Path.Combine(tablesPath, $"FK_Refs_{table.Schema}_{table.Name}.txt"),
-                            refDetails + Environment.NewLine
-                        );
+                        sb.AppendLine(line);
                     }
                 }
+                sb.AppendLine("GO");
+                sb.AppendLine();
+
+                // Script defaults (DriDefaults)
+                var soDefaults = new ScriptingOptions
+                {
+                    DriDefaults = true,
+                    SchemaQualify = true,
+                    IncludeHeaders = false,
+                };
+                var defaultsScript = table.Script(soDefaults);
+                if (defaultsScript != null)
+                {
+                    foreach (var line in defaultsScript)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            var trimmed = line.Trim();
+                            if (
+                                trimmed.StartsWith(
+                                    "ALTER TABLE",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                            {
+                                sb.AppendLine(line);
+                                sb.AppendLine("GO");
+                                sb.AppendLine();
+                            }
+                        }
+                    }
+                }
+
+                // Script foreign keys (DriForeignKeys)
+                var soFKs = new ScriptingOptions
+                {
+                    DriForeignKeys = true,
+                    SchemaQualify = true,
+                    IncludeHeaders = false,
+                };
+                var fkScript = table.Script(soFKs);
+                if (fkScript != null)
+                {
+                    foreach (var line in fkScript)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            var trimmed = line.Trim();
+                            if (
+                                trimmed.StartsWith(
+                                    "ALTER TABLE",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                            {
+                                sb.AppendLine(line);
+                                sb.AppendLine("GO");
+                                sb.AppendLine();
+                            }
+                        }
+                    }
+                }
+
+                // Script check constraints (DriChecks)
+                var soChecks = new ScriptingOptions
+                {
+                    DriChecks = true,
+                    SchemaQualify = true,
+                    IncludeHeaders = false,
+                };
+                var checkScript = table.Script(soChecks);
+                if (checkScript != null)
+                {
+                    foreach (var line in checkScript)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            var trimmed = line.Trim();
+                            if (
+                                trimmed.StartsWith(
+                                    "ALTER TABLE",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                            {
+                                sb.AppendLine(line);
+                                sb.AppendLine("GO");
+                                sb.AppendLine();
+                            }
+                        }
+                    }
+                }
+
+                // Script unique constraints (DriUniqueKeys)
+                var soUniques = new ScriptingOptions
+                {
+                    DriUniqueKeys = true,
+                    SchemaQualify = true,
+                    IncludeHeaders = false,
+                };
+                var uniqueScript = table.Script(soUniques);
+                if (uniqueScript != null)
+                {
+                    foreach (var line in uniqueScript)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            var trimmed = line.Trim();
+                            if (
+                                trimmed.StartsWith(
+                                    "ALTER TABLE",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                            {
+                                sb.AppendLine(line);
+                                sb.AppendLine("GO");
+                                sb.AppendLine();
+                            }
+                        }
+                    }
+                }
+
+                // Script indexes (non-clustered, etc.)
+                var soIndexes = new ScriptingOptions
+                {
+                    Indexes = true,
+                    SchemaQualify = true,
+                    IncludeHeaders = false,
+                };
+                var indexScript = table.Script(soIndexes);
+                if (indexScript != null)
+                {
+                    foreach (var line in indexScript)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            var trimmed = line.Trim();
+                            // Only append CREATE INDEX or CREATE UNIQUE INDEX, never CREATE TABLE
+                            if (
+                                trimmed.StartsWith(
+                                    "CREATE INDEX",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                                || trimmed.StartsWith(
+                                    "CREATE UNIQUE INDEX",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                            {
+                                sb.AppendLine(line);
+                                sb.AppendLine("GO");
+                                sb.AppendLine();
+                            }
+                        }
+                    }
+                }
+
+                // Always overwrite the file, do not append
+                File.WriteAllText(tableFile, sb.ToString());
             }
             catch (Exception ex)
             {
@@ -191,9 +363,38 @@ public static class DbScriptManager
             return;
         }
 
-        var sqlFiles = Directory
+        // Get all .sql files
+        var allSqlFiles = Directory
             .GetFiles(scriptsPath, "*.sql", SearchOption.AllDirectories)
-            .OrderBy(f => f);
+            .ToList();
+
+        // Separate table scripts and others
+        var tablesPath = Path.Combine(scriptsPath, "Tables");
+        var tableScripts = new List<string>();
+        var otherScripts = new List<string>();
+        foreach (var file in allSqlFiles)
+        {
+            if (file.StartsWith(tablesPath))
+                tableScripts.Add(file);
+            else
+                otherScripts.Add(file);
+        }
+
+        // Order table scripts by TableDefaultOrder
+        var orderedTableScripts = new List<string>();
+        foreach (var name in TableDefaultOrder)
+        {
+            var match = tableScripts.FirstOrDefault(f =>
+                f.Replace("\\", "/").EndsWith($"Tables/{name}", StringComparison.OrdinalIgnoreCase)
+            );
+            if (match != null)
+                orderedTableScripts.Add(match);
+        }
+        // Add any remaining table scripts not in the default order
+        orderedTableScripts.AddRange(tableScripts.Except(orderedTableScripts));
+
+        // Combine ordered table scripts and other scripts (other scripts after tables)
+        var sqlFiles = orderedTableScripts.Concat(otherScripts).ToList();
 
         using var scope = services.CreateScope();
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
