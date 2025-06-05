@@ -6,6 +6,7 @@
   "words": [
     "appsettings",
     "Dtos",
+    "fmis",
     "Hmac",
     "mwss",
     "Serilog",

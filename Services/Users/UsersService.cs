@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Dtos.UserManagement;
 using GenericApi.Models;
+using GenericApi.Services.ScriptTools;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
 using GenericApi.Utils.Users;
@@ -21,6 +22,7 @@ namespace GenericApi.Services.Users
         private readonly AppDbContext _context = new();
         private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly IConfiguration _configuration = configuration;
+        private readonly SqlRunner _sqlRunner = new();
 
         public async Task<IActionResult> CreateUser(SignupRequestDto createUser, int? userId)
         {
@@ -40,23 +42,9 @@ namespace GenericApi.Services.Users
             var createdBy = new SqlParameter("@CreatedBy", userId ?? (object)DBNull.Value);
             var userRoleIds = new SqlParameter("@UserRoleIds", parsedRoles);
 
-            var statusCode = new SqlParameter("@StatusCode", SqlDbType.Int)
-            {
-                Direction = ParameterDirection.Output,
-            };
-
-            var message = new SqlParameter("@Message", SqlDbType.NVarChar, 255)
-            {
-                Direction = ParameterDirection.Output,
-            };
-
-            var data = new SqlParameter("@Data", SqlDbType.NVarChar, -1) // -1 for MAX
-            {
-                Direction = ParameterDirection.Output,
-            };
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC fmis.sp_create_user @Email, @Password, @ConfirmPassword, @HashedPassword, @FirstName, @MiddleName, @LastName, @CreatedBy, @UserRoleIds, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+            return await _sqlRunner.RunStoredProcedureAsync<CreateUserResponseDto>(
+                sqlQuery: "EXEC fmis.sp_create_user @Email, @Password, @ConfirmPassword, @HashedPassword, @FirstName, @MiddleName, @LastName, @CreatedBy, @UserRoleIds, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                activity: string.Format(SignupMessages.ACTIVITY, createUser.Email),
                 email,
                 password,
                 confirmPassword,
@@ -65,44 +53,7 @@ namespace GenericApi.Services.Users
                 middleName,
                 lastName,
                 createdBy,
-                userRoleIds,
-                statusCode,
-                message,
-                data
-            );
-
-            var userDataJson = data.Value?.ToString();
-            CreateUserResponseDto? userObj = null;
-            if (!string.IsNullOrWhiteSpace(userDataJson))
-            {
-                userObj = JsonSerializer.Deserialize<CreateUserResponseDto>(userDataJson);
-                // Convert from UTC to UTC+8 (Asia/Manila) if userObj is not null
-                if (userObj != null)
-                {
-                    userObj.CreatedAt = TimeZoneInfo.ConvertTimeFromUtc(
-                        userObj.CreatedAt,
-                        TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila") // UTC+8 Standard Time
-                    );
-                }
-            }
-
-            var _statusCode = (int)statusCode.Value;
-            var _message = message.Value?.ToString();
-
-            if (_statusCode >= StatusCodes.Status400BadRequest)
-            {
-                return _response.Error(
-                    statusCode: _statusCode,
-                    e: new Exception(_message),
-                    saveLog: true
-                );
-            }
-
-            return _response.Success(
-                statusCode: _statusCode,
-                activity: string.Format(SignupMessages.ACTIVITY, userObj?.Email ?? string.Empty),
-                message: SignupMessages.SUCCESS,
-                data: userObj
+                userRoleIds
             );
         }
 
