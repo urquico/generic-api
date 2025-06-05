@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace GenericApi.Dtos.RolesManagement
 {
-    public class GetAllRolesResponseDto
+    public class GetSingleRoleResponseDto
     {
         public int Id { get; set; }
         public string RoleName { get; set; } = null!;

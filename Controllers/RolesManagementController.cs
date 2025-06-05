@@ -94,20 +94,17 @@ namespace GenericApi.Controllers
                     TotalPages = 1,
                 };
 
-                const string activity = "Roles have been retrieved successfully.";
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
                 return _response.Success(
                     statusCode: StatusCodes.Status200OK,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
+                    message: GetAllRolesMessages.SUCCESS,
                     data: response
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
@@ -116,41 +113,57 @@ namespace GenericApi.Controllers
          * @param {string} roleId - The ID of the role to retrieve.
          * @returns {IActionResult} 200 if role retrieved successfully, 500 if an error occurred.
          * @route GET /:roleId
-         * @example response - 200 - Role retrieved successfully
-         * {
-         *   "statusCode": 200,
-         *   "message": "Role has been retrieved successfully.",
-         *   "data": null
-         * }
-         * @example response - 500 - Error
-         * {
-         *   "statusCode": 500,
-         *   "error": "An error occurred while retrieving the role."
-         * }
         */
         [HttpGet("{roleId}")]
-        [ProducesResponseType(typeof(void), 200)]
-        [ProducesResponseType(typeof(object), 500)]
-        public IActionResult GetRole(string roleId)
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [SwaggerOperation(Summary = RoleSummary.GET_SINGLE_ROLE)]
+        public IActionResult GetRole([FromRoute] int roleId)
         {
             try
             {
-                // TODO: Implement the logic to retrieve a specific role
+                // get role and its permissions from the database
+                var role = _context
+                    .Roles.Include(r => r.RoleModulePermissions)
+                    .ThenInclude(rmp => rmp.Permission)
+                    .FirstOrDefault(r => r.Id == roleId);
 
-                const string activity = "Role has been retrieved successfully.";
+                if (role == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception(GetSingleRoleMessages.ROLE_NOT_FOUND)
+                    );
+                }
+
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
+                var roleResponse = new GetSingleRoleResponseDto
+                {
+                    Id = role.Id,
+                    RoleName = role.RoleName,
+                    Status = role.RoleStatus == true ? "Active" : "Inactive",
+                    Permissions =
+                    [
+                        .. role.RoleModulePermissions.Select(rmp =>
+                            rmp.Permission?.PermissionName ?? "Unknown"
+                        ),
+                    ],
+                    DateCreated =
+                        role.CreatedAt != null
+                            ? role.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            : "Unknown",
+                };
+
                 return _response.Success(
-                    statusCode: 200,
-                    activity: activity,
-                    ip: ip,
-                    message: activity,
-                    data: null
+                    statusCode: StatusCodes.Status200OK,
+                    message: GetSingleRoleMessages.SUCCESS,
+                    data: roleResponse
                 );
             }
             catch (Exception ex)
             {
-                return _response.Error(statusCode: 500, e: ex);
+                return _response.Error(statusCode: StatusCodes.Status500InternalServerError, e: ex);
             }
         }
 
