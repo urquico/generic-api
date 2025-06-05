@@ -134,9 +134,8 @@ if (args.Contains("--seed"))
         var modulesSeeder = new ModulesSeeder(dbContext);
 
         keyCategorySeeder.Seed();
-        accountSeeder.Seed();
-
         modulesSeeder.Seed();
+        accountSeeder.Seed();
     }
     return;
 }
