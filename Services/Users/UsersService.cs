@@ -57,34 +57,31 @@ namespace GenericApi.Services.Users
             );
         }
 
-        public IActionResult ChangePassword(int userId, string password, string ip)
+        public async Task<IActionResult> ChangePassword(
+            int userId,
+            string password,
+            string confirmPassword
+        )
         {
             var hashedPassword = GenerateHashedPassword(password);
 
-            // check if user exists
-            var existingUser = _context.Users.FirstOrDefault(u => u.Id == userId);
-            if (existingUser == null)
-            {
-                return _response.Error(
-                    statusCode: StatusCodes.Status404NotFound,
-                    e: new Exception(UserMessages.USER_NOT_FOUND),
-                    saveLog: true
-                );
-            }
+            var userIdParam = new SqlParameter("@UserId", userId);
+            var newPasswordParam = new SqlParameter("@NewPassword", password);
+            var confirmPasswordParam = new SqlParameter("@ConfirmPassword", confirmPassword);
+            var hashedPasswordParam = new SqlParameter(
+                "@HashedPassword",
+                GenerateHashedPassword(password)
+            );
+            var updatedByParam = new SqlParameter("@UpdatedBy", userId);
 
-            // update user password
-            existingUser.Password = hashedPassword;
-            existingUser.UpdatedAt = DateTime.UtcNow;
-            existingUser.UpdatedBy = userId;
-            _context.Update(existingUser);
-            _context.SaveChanges();
-
-            return _response.Success(
-                statusCode: StatusCodes.Status200OK,
-                activity: UserMessages.PASSWORD_CHANGED_SUCCESS,
-                ip: ip,
-                message: UserMessages.PASSWORD_CHANGED_SUCCESS,
-                data: null
+            return await _sqlRunner.RunStoredProcedureAsync<object>(
+                sqlQuery: "EXEC fmis.sp_update_user_password @UserId, @NewPassword, @ConfirmPassword, @HashedPassword, @UpdatedBy, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                activity: UserMessages.SUCCESS,
+                userIdParam,
+                newPasswordParam,
+                confirmPasswordParam,
+                hashedPasswordParam,
+                updatedByParam
             );
         }
 

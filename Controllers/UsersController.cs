@@ -97,28 +97,19 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.SELF_CHANGE_PASSWORD)]
-        public IActionResult ChangePassword([FromBody] ChangePasswordRequestDto changePasswordDto)
+        public async Task<IActionResult> ChangePassword(
+            [FromBody] ChangePasswordRequestDto changePasswordDto
+        )
         {
             try
             {
                 var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
-                var userId = _tokenService.GetUserFromAccessToken(accessToken).Id;
+                var loggedUser = _tokenService.GetUserFromAccessToken(accessToken);
 
-                // check if Password and ConfirmPassword matches
-                if (changePasswordDto.Password != changePasswordDto.ConfirmPassword)
-                {
-                    return _response.Error(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        e: new Exception(UserMessages.PASSWORD_MISMATCH),
-                        saveLog: true
-                    );
-                }
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
-
-                return _usersService.ChangePassword(
-                    userId: userId,
+                return await _usersService.ChangePassword(
+                    userId: loggedUser.Id,
                     password: changePasswordDto.Password,
-                    ip: ip
+                    confirmPassword: changePasswordDto.ConfirmPassword
                 );
             }
             catch (Exception ex)
