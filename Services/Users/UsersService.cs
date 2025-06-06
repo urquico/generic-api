@@ -29,31 +29,34 @@ namespace GenericApi.Services.Users
             // convert [1, 2] to "1,2" for SQL parameter
             var parsedRoles = string.Join(",", createUser.UserRoles.Select(r => r.ToString()));
 
-            var email = new SqlParameter("@Email", createUser.Email);
-            var password = new SqlParameter("@Password", createUser.Password);
-            var confirmPassword = new SqlParameter("@ConfirmPassword", createUser.ConfirmPassword);
-            var hashedPassword = new SqlParameter(
+            var emailParam = new SqlParameter("@Email", createUser.Email);
+            var passwordParam = new SqlParameter("@Password", createUser.Password);
+            var confirmPasswordParam = new SqlParameter(
+                "@ConfirmPassword",
+                createUser.ConfirmPassword
+            );
+            var hashedPasswordParam = new SqlParameter(
                 "@HashedPassword",
                 GenerateHashedPassword(createUser.Password)
             );
-            var firstName = new SqlParameter("@FirstName", createUser.FirstName);
-            var middleName = new SqlParameter("@MiddleName", createUser.MiddleName);
-            var lastName = new SqlParameter("@LastName", createUser.LastName);
-            var createdBy = new SqlParameter("@CreatedBy", userId ?? (object)DBNull.Value);
-            var userRoleIds = new SqlParameter("@UserRoleIds", parsedRoles);
+            var firstNameParam = new SqlParameter("@FirstName", createUser.FirstName);
+            var middleNameParam = new SqlParameter("@MiddleName", createUser.MiddleName);
+            var lastNameParam = new SqlParameter("@LastName", createUser.LastName);
+            var createdByParam = new SqlParameter("@CreatedBy", userId ?? (object)DBNull.Value);
+            var userRoleIdsParam = new SqlParameter("@UserRoleIds", parsedRoles);
 
             return await _sqlRunner.RunStoredProcedureAsync<CreateUserResponseDto>(
-                sqlQuery: "EXEC fmis.sp_create_user @Email, @Password, @ConfirmPassword, @HashedPassword, @FirstName, @MiddleName, @LastName, @CreatedBy, @UserRoleIds, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                sqlQuery: "EXEC fmis.sp_user_create @Email, @Password, @ConfirmPassword, @HashedPassword, @FirstName, @MiddleName, @LastName, @CreatedBy, @UserRoleIds, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
                 activity: string.Format(SignupMessages.ACTIVITY, createUser.Email),
-                email,
-                password,
-                confirmPassword,
-                hashedPassword,
-                firstName,
-                middleName,
-                lastName,
-                createdBy,
-                userRoleIds
+                emailParam,
+                passwordParam,
+                confirmPasswordParam,
+                hashedPasswordParam,
+                firstNameParam,
+                middleNameParam,
+                lastNameParam,
+                createdByParam,
+                userRoleIdsParam
             );
         }
 
@@ -63,8 +66,6 @@ namespace GenericApi.Services.Users
             string confirmPassword
         )
         {
-            var hashedPassword = GenerateHashedPassword(password);
-
             var userIdParam = new SqlParameter("@UserId", userId);
             var newPasswordParam = new SqlParameter("@NewPassword", password);
             var confirmPasswordParam = new SqlParameter("@ConfirmPassword", confirmPassword);
@@ -75,7 +76,7 @@ namespace GenericApi.Services.Users
             var updatedByParam = new SqlParameter("@UpdatedBy", userId);
 
             return await _sqlRunner.RunStoredProcedureAsync<object>(
-                sqlQuery: "EXEC fmis.sp_update_user_password @UserId, @NewPassword, @ConfirmPassword, @HashedPassword, @UpdatedBy, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                sqlQuery: "EXEC fmis.sp_user_update_password @UserId, @NewPassword, @ConfirmPassword, @HashedPassword, @UpdatedBy, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
                 activity: UserMessages.SUCCESS,
                 userIdParam,
                 newPasswordParam,

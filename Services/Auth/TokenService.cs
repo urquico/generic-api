@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
@@ -42,27 +43,17 @@ namespace GenericApi.Services.Auth
             var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15");
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
-            // every time an access token is generated, get the roles and list of permissions for the user
-            // Cache the user roles for the given user ID
-            var userRoles = _context
-                .UserRoles.Where(ur => ur.UserId == user.Id)
-                .Include(ur => ur.Role)
-                .ThenInclude(r => r.RoleModulePermissions)
-                .ThenInclude(rmp => rmp.Permission)
-                .ToList();
+            var roles = user.Roles.Select(r => r.RoleName).ToList();
+            var permissions = user.Permissions.Select(p => p.PermissionName).ToList();
 
-            var roles = userRoles
-                .Where(ur => ur.Role != null)
-                .Select(ur => ur.Role.RoleName)
-                .ToList();
-
-            var permissions = userRoles
-                .Where(ur => ur.Role != null && ur.Role.RoleModulePermissions != null)
-                .SelectMany(ur => ur.Role.RoleModulePermissions)
-                .Where(rmp => rmp.Permission != null && rmp.Permission.PermissionName != null)
-                .Select(rmp => rmp.Permission.PermissionName)
-                .Distinct()
-                .ToList();
+            var minimalUser = new MinimalUserDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                MiddleName = user.MiddleName,
+                LastName = user.LastName,
+            };
 
             var claims = new List<Claim>
             {
@@ -72,7 +63,7 @@ namespace GenericApi.Services.Auth
                     JwtRegisteredClaimNames.Iat,
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
                 ),
-                new("user", System.Text.Json.JsonSerializer.Serialize(user)),
+                new("user", JsonSerializer.Serialize(minimalUser)),
             };
 
             // persist roles in the claims
@@ -112,8 +103,7 @@ namespace GenericApi.Services.Auth
                 new RefreshToken
                 {
                     Token = refreshToken,
-                    // TODO: Change AddMinutes to AddDays for refresh token expiration after testing
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(expiresDays),
+                    ExpiresAt = DateTime.UtcNow.AddDays(expiresDays),
                     CreatedAt = DateTime.UtcNow,
                     UserId = userId,
                     UserAgent = userAgent,
@@ -144,7 +134,7 @@ namespace GenericApi.Services.Auth
                 throw new Exception("User claim not found in access token");
             }
 
-            return System.Text.Json.JsonSerializer.Deserialize<UserJwtDto>(userClaim.Value)
+            return JsonSerializer.Deserialize<UserJwtDto>(userClaim.Value)
                 ?? throw new Exception("Failed to deserialize user from access token");
         }
 

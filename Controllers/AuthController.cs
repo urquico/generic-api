@@ -1,12 +1,15 @@
 using GenericApi.Dtos.Auth;
+using GenericApi.Dtos.UserManagement;
 using GenericApi.Models;
 using GenericApi.Services.Auth;
+using GenericApi.Services.ScriptTools;
 using GenericApi.Services.Users;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
 using GenericApi.Utils.SwaggerSummary;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Swashbuckle.AspNetCore.Annotations;
 using UAParser;
 
@@ -27,6 +30,7 @@ namespace GenericApi.Controllers
         private readonly AppDbContext _context = new();
         private readonly IConfiguration _configuration = configuration;
         private readonly UsersService _usersService = usersService;
+        private readonly SqlRunner _sqlRunner = new();
 
         /**
          * Signup endpoint allows a new user to register.
@@ -68,23 +72,34 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = AuthSummary.LOGIN)]
-        public IActionResult Login([FromBody] LoginRequestDto loginRequestDto)
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto loginRequestDto)
         {
             try
             {
+                var emailParam = new SqlParameter("@Email", loginRequestDto.Email);
+
                 // Check if the email is existing
-                var user = _context.Users.FirstOrDefault(u => u.Email == loginRequestDto.Email);
-                if (user == null)
+                var user = await _sqlRunner.RunStoredProcedureRaw<GetUserByEmailResponseDto>(
+                    sqlQuery: "EXEC fmis.sp_user_get_by_email @Email, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                    emailParam
+                );
+
+                if (user.StatusCode >= StatusCodes.Status400BadRequest)
                 {
                     return _response.Error(
-                        statusCode: StatusCodes.Status404NotFound,
-                        e: new Exception(LoginMessage.EMAIL_NOT_FOUND),
+                        statusCode: user.StatusCode,
+                        e: new Exception(
+                            user.Message ?? "An error occurred while fetching user data."
+                        ),
                         saveLog: true
                     );
                 }
 
                 // Check if the user password is correct
-                var isValid = BCrypt.Net.BCrypt.Verify(loginRequestDto.Password, user.Password);
+                var isValid = BCrypt.Net.BCrypt.Verify(
+                    loginRequestDto.Password,
+                    user.Data?.Password ?? string.Empty
+                );
                 if (!isValid)
                 {
                     return _response.Error(
@@ -111,22 +126,33 @@ namespace GenericApi.Controllers
 
                 string agentName = $"{browser} on {os} ({device})";
 
+                if (user.Data == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status404NotFound,
+                        e: new Exception("User data not found."),
+                        saveLog: true
+                    );
+                }
+
                 var userDto = new UserJwtDto
                 {
-                    Id = user.Id,
-                    Email = user.Email,
-                    FirstName = user.FirstName,
-                    MiddleName = user.MiddleName,
-                    LastName = user.LastName,
+                    Id = user.Data.Id,
+                    Email = user.Data.Email,
+                    FirstName = user.Data.FirstName,
+                    MiddleName = user.Data.MiddleName,
+                    LastName = user.Data.LastName,
+                    Roles = user.Data.Roles ?? [],
+                    Permissions = user.Data.Permissions ?? [],
                     // Add other properties as needed
                 };
 
                 var (accessToken, permissions) = _tokenService.GenerateAccessToken(userDto);
-                var refreshToken = _tokenService.GenerateRefreshToken(user.Id, agentName, ip);
+                var refreshToken = _tokenService.GenerateRefreshToken(user.Data.Id, agentName, ip);
 
                 // Set tokens as HttpOnly cookies
-                SetRefreshAuthCookies(refreshToken);
                 SetAccessAuthCookies(accessToken);
+                SetRefreshAuthCookies(refreshToken);
 
                 return _response.Success(
                     statusCode: StatusCodes.Status200OK,
@@ -311,8 +337,7 @@ namespace GenericApi.Controllers
                     HttpOnly = true,
                     Secure = false, // TODO: Set to true in production (requires HTTPS)
                     SameSite = SameSiteMode.Strict,
-                    // TODO: Change AddMinutes to AddDays for refresh token expiration after testing
-                    Expires = DateTimeOffset.UtcNow.AddMinutes(double.Parse(expiration)),
+                    Expires = DateTimeOffset.UtcNow.AddDays(double.Parse(expiration)),
                 }
             );
         }
