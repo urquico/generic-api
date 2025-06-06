@@ -148,7 +148,11 @@ namespace GenericApi.Controllers
                 };
 
                 var (accessToken, permissions) = _tokenService.GenerateAccessToken(userDto);
-                var refreshToken = _tokenService.GenerateRefreshToken(user.Data.Id, agentName, ip);
+                var refreshToken = await _tokenService.GenerateRefreshToken(
+                    user.Data.Id,
+                    agentName,
+                    ip
+                );
 
                 // Set tokens as HttpOnly cookies
                 SetAccessAuthCookies(accessToken);

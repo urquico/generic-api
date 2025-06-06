@@ -9,6 +9,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
+using GenericApi.Services.ScriptTools;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -21,6 +23,7 @@ namespace GenericApi.Services.Auth
         private readonly IConfiguration _configuration = configuration;
 
         private readonly AppDbContext _context = new();
+        private readonly SqlRunner _sqlRunner = new();
 
         private readonly Serilog.ILogger _logger = Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -89,7 +92,11 @@ namespace GenericApi.Services.Auth
             return new TokenResult(new JwtSecurityTokenHandler().WriteToken(token), permissions);
         }
 
-        public string GenerateRefreshToken(int userId, string userAgent, string? ipAddress = null)
+        public async Task<string> GenerateRefreshToken(
+            int userId,
+            string userAgent,
+            string? ipAddress = null
+        )
         {
             var randomBytes = RandomNumberGenerator.GetBytes(64);
 
@@ -98,20 +105,26 @@ namespace GenericApi.Services.Auth
             var jwtSettings = _configuration.GetSection("Jwt");
             var expiresDays = double.Parse(jwtSettings["RefreshTokenExpirationDays"] ?? "7");
 
-            // save the refresh token in the database
-            _context.RefreshTokens.Add(
-                new RefreshToken
-                {
-                    Token = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddDays(expiresDays),
-                    CreatedAt = DateTime.UtcNow,
-                    UserId = userId,
-                    UserAgent = userAgent,
-                    IpAddress = ipAddress ?? "Unknown IP",
-                }
+            var userIdParam = new SqlParameter("@UserId", userId);
+            var tokenParam = new SqlParameter("@Token", refreshToken);
+            var expiresAtParam = new SqlParameter(
+                "@ExpiresAt",
+                DateTime.UtcNow.AddDays(expiresDays)
             );
+            var userAgentParam = new SqlParameter("@UserAgent", userAgent);
+            var ipAddressParam = new SqlParameter("@IpAddress", ipAddress ?? "Unknown IP");
+            var createdByParam = new SqlParameter("@CreatedBy", userId.ToString());
 
-            _context.SaveChanges();
+            // save the refresh token in the database
+            await _sqlRunner.RunStoredProcedureRaw<object>(
+                sqlQuery: "EXEC fmis.sp_refresh_token_create @UserId, @Token, @ExpiresAt, @UserAgent, @IpAddress, @CreatedBy, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                userIdParam,
+                tokenParam,
+                expiresAtParam,
+                userAgentParam,
+                ipAddressParam,
+                createdByParam
+            );
 
             return refreshToken;
         }
