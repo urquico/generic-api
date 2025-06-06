@@ -5,13 +5,19 @@ using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
+using GenericApi.Services.ScriptTools;
+using GenericApi.Utils;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using static GenericApi.Services.ScriptTools.SqlRunner;
 
 namespace GenericApi.Services.Auth
 {
@@ -20,6 +26,7 @@ namespace GenericApi.Services.Auth
         private readonly IConfiguration _configuration = configuration;
 
         private readonly AppDbContext _context = new();
+        private readonly SqlRunner _sqlRunner = new();
 
         private readonly Serilog.ILogger _logger = Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -42,27 +49,17 @@ namespace GenericApi.Services.Auth
             var expiresMinutes = double.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15");
             var expires = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
-            // every time an access token is generated, get the roles and list of permissions for the user
-            // Cache the user roles for the given user ID
-            var userRoles = _context
-                .UserRoles.Where(ur => ur.UserId == user.Id)
-                .Include(ur => ur.Role)
-                .ThenInclude(r => r.RoleModulePermissions)
-                .ThenInclude(rmp => rmp.Permission)
-                .ToList();
+            var roles = user.Roles.Select(r => r.RoleName).ToList();
+            var permissions = user.Permissions.Select(p => p.PermissionName).ToList();
 
-            var roles = userRoles
-                .Where(ur => ur.Role != null)
-                .Select(ur => ur.Role.RoleName)
-                .ToList();
-
-            var permissions = userRoles
-                .Where(ur => ur.Role != null && ur.Role.RoleModulePermissions != null)
-                .SelectMany(ur => ur.Role.RoleModulePermissions)
-                .Where(rmp => rmp.Permission != null && rmp.Permission.PermissionName != null)
-                .Select(rmp => rmp.Permission.PermissionName)
-                .Distinct()
-                .ToList();
+            var minimalUser = new MinimalUserDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                MiddleName = user.MiddleName,
+                LastName = user.LastName,
+            };
 
             var claims = new List<Claim>
             {
@@ -72,7 +69,7 @@ namespace GenericApi.Services.Auth
                     JwtRegisteredClaimNames.Iat,
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
                 ),
-                new("user", System.Text.Json.JsonSerializer.Serialize(user)),
+                new("user", JsonSerializer.Serialize(minimalUser)),
             };
 
             // persist roles in the claims
@@ -98,7 +95,11 @@ namespace GenericApi.Services.Auth
             return new TokenResult(new JwtSecurityTokenHandler().WriteToken(token), permissions);
         }
 
-        public string GenerateRefreshToken(int userId, string userAgent, string? ipAddress = null)
+        public async Task<string> GenerateRefreshToken(
+            int userId,
+            string userAgent,
+            string? ipAddress = null
+        )
         {
             var randomBytes = RandomNumberGenerator.GetBytes(64);
 
@@ -107,21 +108,26 @@ namespace GenericApi.Services.Auth
             var jwtSettings = _configuration.GetSection("Jwt");
             var expiresDays = double.Parse(jwtSettings["RefreshTokenExpirationDays"] ?? "7");
 
-            // save the refresh token in the database
-            _context.RefreshTokens.Add(
-                new RefreshToken
-                {
-                    Token = refreshToken,
-                    // TODO: Change AddMinutes to AddDays for refresh token expiration after testing
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(expiresDays),
-                    CreatedAt = DateTime.UtcNow,
-                    UserId = userId,
-                    UserAgent = userAgent,
-                    IpAddress = ipAddress ?? "Unknown IP",
-                }
+            var userIdParam = new SqlParameter("@UserId", userId);
+            var tokenParam = new SqlParameter("@Token", refreshToken);
+            var expiresAtParam = new SqlParameter(
+                "@ExpiresAt",
+                DateTime.UtcNow.AddDays(expiresDays)
             );
+            var userAgentParam = new SqlParameter("@UserAgent", userAgent);
+            var ipAddressParam = new SqlParameter("@IpAddress", ipAddress ?? "Unknown IP");
+            var createdByParam = new SqlParameter("@CreatedBy", userId.ToString());
 
-            _context.SaveChanges();
+            // save the refresh token in the database
+            await _sqlRunner.RunStoredProcedureRaw<object>(
+                sqlQuery: "EXEC fmis.sp_refresh_token_create @UserId, @Token, @ExpiresAt, @UserAgent, @IpAddress, @CreatedBy, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                userIdParam,
+                tokenParam,
+                expiresAtParam,
+                userAgentParam,
+                ipAddressParam,
+                createdByParam
+            );
 
             return refreshToken;
         }
@@ -144,8 +150,39 @@ namespace GenericApi.Services.Auth
                 throw new Exception("User claim not found in access token");
             }
 
-            return System.Text.Json.JsonSerializer.Deserialize<UserJwtDto>(userClaim.Value)
+            return JsonSerializer.Deserialize<UserJwtDto>(userClaim.Value)
                 ?? throw new Exception("Failed to deserialize user from access token");
+        }
+
+        public async Task<
+            StoredProcedureRawResult<ValidateRefreshTokenResponseDto>
+        > CheckRefreshTokenValidity(string refreshToken)
+        {
+            var tokenParam = new SqlParameter("@Token", refreshToken);
+
+            var token = await _sqlRunner.RunStoredProcedureRaw<ValidateRefreshTokenResponseDto>(
+                sqlQuery: "EXEC fmis.sp_refresh_token_validate @Token, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                tokenParam
+            );
+
+            return token;
+        }
+
+        public async Task<StoredProcedureRawResult<object>> RevokeRefreshToken(
+            string refreshToken,
+            string? revokedBy = null
+        )
+        {
+            var tokenParam = new SqlParameter("@Token", refreshToken);
+            var revokedByParam = new SqlParameter("@RevokedBy", revokedBy ?? "System");
+
+            var revokedToken = await _sqlRunner.RunStoredProcedureRaw<object>(
+                "EXEC fmis.sp_refresh_token_revoke @Token, @RevokedBy, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                tokenParam,
+                revokedByParam
+            );
+
+            return revokedToken;
         }
 
         public void DeleteExpiredRefreshTokens()
