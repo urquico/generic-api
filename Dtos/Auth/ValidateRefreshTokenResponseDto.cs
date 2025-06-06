@@ -34,5 +34,11 @@ namespace GenericApi.Dtos.Auth
 
         [JsonPropertyName("created_by")]
         public string? CreatedBy { get; set; }
+
+        [JsonPropertyName("revoked_at")]
+        public DateTime? RevokedAt { get; set; }
+
+        [JsonPropertyName("revoked_by")]
+        public string? RevokedBy { get; set; }
     }
 }

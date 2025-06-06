@@ -168,6 +168,23 @@ namespace GenericApi.Services.Auth
             return token;
         }
 
+        public async Task<StoredProcedureRawResult<object>> RevokeRefreshToken(
+            string refreshToken,
+            string? revokedBy = null
+        )
+        {
+            var tokenParam = new SqlParameter("@Token", refreshToken);
+            var revokedByParam = new SqlParameter("@RevokedBy", revokedBy ?? "System");
+
+            var revokedToken = await _sqlRunner.RunStoredProcedureRaw<object>(
+                "EXEC fmis.sp_refresh_token_revoke @Token, @RevokedBy, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                tokenParam,
+                revokedByParam
+            );
+
+            return revokedToken;
+        }
+
         public void DeleteExpiredRefreshTokens()
         {
             var now = DateTime.UtcNow;

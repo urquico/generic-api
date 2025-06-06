@@ -11,8 +11,10 @@ using GenericApi.Utils.SwaggerSummary;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Swashbuckle.AspNetCore.Annotations;
 using UAParser;
+using static GenericApi.Services.ScriptTools.SqlRunner;
 
 namespace GenericApi.Controllers
 {
@@ -282,32 +284,37 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = AuthSummary.LOGOUT)]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             try
             {
+                StoredProcedureRawResult<ValidateRefreshTokenResponseDto> token = new();
+
                 // revoke the refresh token and clear the cookies
                 if (Request.Cookies.TryGetValue("refreshToken", out string? refreshToken))
                 {
-                    var token = _context.RefreshTokens.FirstOrDefault(rt =>
-                        rt.Token == refreshToken
-                    );
-                    if (token == null)
+                    token = await _tokenService.CheckRefreshTokenValidity(refreshToken);
+                    if (token.StatusCode >= StatusCodes.Status400BadRequest)
                     {
-                        Response.Cookies.Delete("refreshToken");
                         return _response.Error(
-                            statusCode: StatusCodes.Status401Unauthorized,
-                            e: new Exception(LogoutMessages.MISSING_TOKEN),
+                            statusCode: token.StatusCode,
+                            e: new Exception(
+                                token.Message
+                                    ?? "An error occurred while validating the refresh token."
+                            ),
                             saveLog: true
                         );
                     }
                     else
                     {
                         // Mark the token as revoked
-                        token.RevokedAt = DateTime.UtcNow;
-                        token.RevokedBy = token.UserId.ToString();
-                        _context.RefreshTokens.Update(token);
-                        _context.SaveChanges();
+                        if (token.Data != null)
+                        {
+                            await _tokenService.RevokeRefreshToken(
+                                refreshToken,
+                                revokedBy: token.Data.UserId.ToString()
+                            );
+                        }
                     }
 
                     // clear the cookies
