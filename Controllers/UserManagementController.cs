@@ -8,6 +8,7 @@ using GenericApi.Models;
 using GenericApi.Services.Auth;
 using GenericApi.Services.Users;
 using GenericApi.Utils;
+using GenericApi.Utils.Auth;
 using GenericApi.Utils.SwaggerSummary;
 using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -26,7 +27,7 @@ namespace GenericApi.Controllers
         IConfiguration configuration
     ) : ControllerBase
     {
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly UsersService _usersService = usersService;
         private readonly TokenService _tokenService = tokenService;
         private readonly AppDbContext _context = new();
@@ -155,21 +156,17 @@ namespace GenericApi.Controllers
         [PermissionAuthorize("Admin.CanCreateUser")]
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.CREATE_USER)]
-        public IActionResult CreateUser([FromBody] CreateUserRequestDto createUserDto)
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequestDto createUserDto)
         {
             try
             {
                 var accessToken = HttpContext.Request.Cookies["accessToken"] ?? "";
                 var loggedUser = _tokenService.GetUserFromAccessToken(accessToken);
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
 
-                return _usersService.CreateUser(
-                    createUser: createUserDto,
-                    userId: loggedUser.Id,
-                    ip: ip
-                );
+                return await _usersService.CreateUser(createUserDto, userId: loggedUser.Id);
             }
             catch (Exception ex)
             {

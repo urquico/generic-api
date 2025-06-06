@@ -1,110 +1,59 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Dtos.UserManagement;
 using GenericApi.Models;
+using GenericApi.Services.ScriptTools;
 using GenericApi.Utils;
 using GenericApi.Utils.Auth;
 using GenericApi.Utils.Users;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace GenericApi.Services.Users
 {
     public class UsersService(IConfiguration configuration)
     {
         private readonly AppDbContext _context = new();
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly IConfiguration _configuration = configuration;
+        private readonly SqlRunner _sqlRunner = new();
 
-        public IActionResult CreateUser(SignupRequestDto createUser, int? userId, string ip)
+        public async Task<IActionResult> CreateUser(SignupRequestDto createUser, int? userId)
         {
-            // Check if the email already exists
-            var existingUser = _context.Users.FirstOrDefault(u => u.Email == createUser.Email);
-            if (existingUser != null)
-            {
-                return _response.Error(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    e: new Exception(SignupMessages.EMAIL_ALREADY_EXISTS),
-                    saveLog: true
-                );
-            }
+            // convert [1, 2] to "1,2" for SQL parameter
+            var parsedRoles = string.Join(",", createUser.UserRoles.Select(r => r.ToString()));
 
-            // Check if password and confirm password match
-            if (createUser.Password != createUser.ConfirmPassword)
-            {
-                return _response.Error(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    e: new Exception(SignupMessages.PASSWORD_CONFIRMATION_MISMATCH),
-                    saveLog: true
-                );
-            }
-
-            var hashedPassword = GenerateHashedPassword(createUser.Password);
-
-            // Check if the createUser.UserRoles is empty, null, or contains 0
-            if (
-                createUser.UserRoles == null
-                || createUser.UserRoles.Count == 0
-                || createUser.UserRoles.Contains(0)
-            )
-            {
-                return _response.Error(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    e: new Exception(SignupMessages.USER_ROLES_EMPTY),
-                    saveLog: true
-                );
-            }
-
-            // save the new user to the database
-            var insertedUser = _context.Users.Add(
-                new User
-                {
-                    Email = createUser.Email,
-                    Password = hashedPassword,
-                    FirstName = createUser.FirstName,
-                    MiddleName = createUser.MiddleName,
-                    LastName = createUser.LastName,
-                    StatusId = 1,
-                    UserRoles =
-                    [
-                        .. createUser.UserRoles.Select(roleId => new UserRole
-                        {
-                            RoleId = roleId,
-                            CreatedAt = DateTime.UtcNow,
-                            CreatedBy = userId,
-                            UpdatedAt = DateTime.UtcNow,
-                        }),
-                    ],
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = userId,
-                    UpdatedAt = DateTime.UtcNow,
-                }
+            var email = new SqlParameter("@Email", createUser.Email);
+            var password = new SqlParameter("@Password", createUser.Password);
+            var confirmPassword = new SqlParameter("@ConfirmPassword", createUser.ConfirmPassword);
+            var hashedPassword = new SqlParameter(
+                "@HashedPassword",
+                GenerateHashedPassword(createUser.Password)
             );
+            var firstName = new SqlParameter("@FirstName", createUser.FirstName);
+            var middleName = new SqlParameter("@MiddleName", createUser.MiddleName);
+            var lastName = new SqlParameter("@LastName", createUser.LastName);
+            var createdBy = new SqlParameter("@CreatedBy", userId ?? (object)DBNull.Value);
+            var userRoleIds = new SqlParameter("@UserRoleIds", parsedRoles);
 
-            _context.SaveChanges();
-
-            return _response.Success(
-                statusCode: StatusCodes.Status201Created,
-                activity: string.Format(
-                    SignupMessages.SIGNUP_ACTIVITY_LOG,
-                    insertedUser.Entity.Email
-                ),
-                ip: ip,
-                message: SignupMessages.SUCCESS_SIGNUP,
-                data: new
-                {
-                    insertedUser.Entity.Id,
-                    insertedUser.Entity.Email,
-                    insertedUser.Entity.FirstName,
-                    insertedUser.Entity.LastName,
-                    Value = insertedUser.Entity.UserRoles.Select(ur => new
-                    {
-                        ur.RoleId,
-                        _context.Roles.FirstOrDefault(r => r.Id == ur.RoleId)?.RoleName,
-                    }),
-                }
+            return await _sqlRunner.RunStoredProcedureAsync<CreateUserResponseDto>(
+                sqlQuery: "EXEC fmis.sp_create_user @Email, @Password, @ConfirmPassword, @HashedPassword, @FirstName, @MiddleName, @LastName, @CreatedBy, @UserRoleIds, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                activity: string.Format(SignupMessages.ACTIVITY, createUser.Email),
+                email,
+                password,
+                confirmPassword,
+                hashedPassword,
+                firstName,
+                middleName,
+                lastName,
+                createdBy,
+                userRoleIds
             );
         }
 

@@ -15,7 +15,7 @@ namespace GenericApi.Controllers
     [SwaggerTag("Permissions Endpoints")]
     public class PermissionsController : ControllerBase
     {
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly AppDbContext _context = new();
 
         /**

@@ -22,7 +22,7 @@ namespace GenericApi.Controllers
         UsersService usersService
     ) : ControllerBase
     {
-        private readonly CustomSuccess _response = new();
+        private readonly ApiResponse _response = new(new HttpContextAccessor());
         private readonly TokenService _tokenService = tokenService;
         private readonly AppDbContext _context = new();
         private readonly IConfiguration _configuration = configuration;
@@ -39,19 +39,14 @@ namespace GenericApi.Controllers
         [AllowAnonymous]
         [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = AuthSummary.SIGNUP)]
-        public IActionResult Signup([FromBody] SignupRequestDto signupRequestDto)
+        public async Task<IActionResult> Signup([FromBody] SignupRequestDto signupRequestDto)
         {
             try
             {
-                string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
-
-                return _usersService.CreateUser(
-                    createUser: signupRequestDto,
-                    userId: null, // No user ID for signup
-                    ip: ip
-                );
+                return await _usersService.CreateUser(signupRequestDto, userId: null);
             }
             catch (Exception ex)
             {
