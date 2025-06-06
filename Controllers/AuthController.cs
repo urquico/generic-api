@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Dtos.UserManagement;
 using GenericApi.Models;
@@ -185,7 +186,7 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = AuthSummary.REFRESH)]
-        public IActionResult Refresh()
+        public async Task<IActionResult> Refresh()
         {
             try
             {
@@ -200,37 +201,37 @@ namespace GenericApi.Controllers
                 }
 
                 // Validate the refresh token
-                var token = _context.RefreshTokens.FirstOrDefault(rt => rt.Token == refreshToken);
-                if (token == null || token.ExpiresAt < DateTime.UtcNow)
+                var token = await _tokenService.CheckRefreshTokenValidity(refreshToken);
+
+                if (token.StatusCode >= StatusCodes.Status400BadRequest)
                 {
-                    // remove both tokens
-                    Response.Cookies.Delete("refreshToken");
-                    Response.Cookies.Delete("accessToken");
-
                     return _response.Error(
-                        statusCode: StatusCodes.Status401Unauthorized,
-                        e: new Exception(RefreshMessages.INVALID_TOKEN),
-                        saveLog: true
-                    );
-                }
-
-                // Check if token has revoked_at
-                if (token.RevokedAt.HasValue)
-                {
-                    // remove both tokens from cookies
-                    Response.Cookies.Delete("refreshToken");
-                    Response.Cookies.Delete("accessToken");
-
-                    return _response.Error(
-                        statusCode: StatusCodes.Status401Unauthorized,
-                        e: new Exception(RefreshMessages.REVOKED_TOKEN),
+                        statusCode: token.StatusCode,
+                        e: new Exception(
+                            token.Message ?? "An error occurred while validating the refresh token."
+                        ),
                         saveLog: true
                     );
                 }
 
                 // Generate a new access token
-                var user = _context.Users.Find(token.UserId);
-                if (user == null)
+                if (token.Data == null)
+                {
+                    return _response.Error(
+                        statusCode: StatusCodes.Status401Unauthorized,
+                        e: new Exception("Invalid refresh token data."),
+                        saveLog: true
+                    );
+                }
+
+                var userIdParam = new SqlParameter("@UserId", token.Data.UserId);
+
+                var user = await _sqlRunner.RunStoredProcedureRaw<GetUserByIdResponseDto>(
+                    sqlQuery: "EXEC fmis.sp_user_get_by_id @UserId, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                    userIdParam
+                );
+
+                if (user.Data == null)
                 {
                     return _response.Error(
                         statusCode: StatusCodes.Status404NotFound,
@@ -243,11 +244,13 @@ namespace GenericApi.Controllers
 
                 var userDto = new UserJwtDto
                 {
-                    Id = user.Id,
-                    Email = user.Email,
-                    FirstName = user.FirstName,
-                    MiddleName = user.MiddleName,
-                    LastName = user.LastName,
+                    Id = user.Data.Id,
+                    Email = user.Data.Email,
+                    FirstName = user.Data.FirstName,
+                    MiddleName = user.Data.MiddleName,
+                    LastName = user.Data.LastName,
+                    Roles = user.Data.Roles ?? [],
+                    Permissions = user.Data.Permissions ?? [],
                     // Add other properties as needed
                 };
                 var (accessToken, permissions) = _tokenService.GenerateAccessToken(userDto);

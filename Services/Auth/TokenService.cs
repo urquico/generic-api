@@ -10,11 +10,14 @@ using System.Threading.Tasks;
 using GenericApi.Dtos.Auth;
 using GenericApi.Models;
 using GenericApi.Services.ScriptTools;
+using GenericApi.Utils;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using static GenericApi.Services.ScriptTools.SqlRunner;
 
 namespace GenericApi.Services.Auth
 {
@@ -149,6 +152,20 @@ namespace GenericApi.Services.Auth
 
             return JsonSerializer.Deserialize<UserJwtDto>(userClaim.Value)
                 ?? throw new Exception("Failed to deserialize user from access token");
+        }
+
+        public async Task<
+            StoredProcedureRawResult<ValidateRefreshTokenResponseDto>
+        > CheckRefreshTokenValidity(string refreshToken)
+        {
+            var tokenParam = new SqlParameter("@Token", refreshToken);
+
+            var token = await _sqlRunner.RunStoredProcedureRaw<ValidateRefreshTokenResponseDto>(
+                sqlQuery: "EXEC fmis.sp_refresh_token_validate @Token, @StatusCode OUTPUT, @Message OUTPUT, @Data OUTPUT",
+                tokenParam
+            );
+
+            return token;
         }
 
         public void DeleteExpiredRefreshTokens()
