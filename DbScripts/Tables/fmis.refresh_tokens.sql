@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[refresh_tokens]    Script Date: 6/5/2025 5:06:02 PM ******/
+/****** Object:  Table [fmis].[refresh_tokens]    Script Date: 6/6/2025 1:44:59 PM ******/
 SET ANSI_NULLS ON
 GO
 

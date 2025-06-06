@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[module_permissions]    Script Date: 6/5/2025 5:05:59 PM ******/
+/****** Object:  Table [fmis].[module_permissions]    Script Date: 6/6/2025 1:44:57 PM ******/
 SET ANSI_NULLS ON
 GO
 

@@ -1,4 +1,4 @@
-/****** Object:  Table [mwss].[key_categories]    Script Date: 6/5/2025 5:06:04 PM ******/
+/****** Object:  Table [mwss].[key_categories]    Script Date: 6/6/2025 1:45:01 PM ******/
 SET ANSI_NULLS ON
 GO
 

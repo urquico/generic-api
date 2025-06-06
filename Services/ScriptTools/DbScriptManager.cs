@@ -52,14 +52,18 @@ public static class DbScriptManager
 
         var server = new Server(serverConnection);
 
+        string dbName = sqlBuilder.InitialCatalog;
+
         // Debug: list available databases
         Console.WriteLine("Available databases:");
         foreach (Database db in server.Databases)
         {
-            Console.WriteLine($" - {db.Name}");
+            if (db.Name == dbName)
+                Console.WriteLine($" - {db.Name} (selected)");
+            else
+                Console.WriteLine($" - {db.Name}");
         }
 
-        string dbName = sqlBuilder.InitialCatalog;
         var database = server.Databases[dbName];
 
         if (database == null)
