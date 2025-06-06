@@ -52,14 +52,26 @@ public static class DbScriptManager
 
         var server = new Server(serverConnection);
 
+        string dbName = sqlBuilder.InitialCatalog;
+
         // Debug: list available databases
+        Console.ForegroundColor = ConsoleColor.Cyan;
         Console.WriteLine("Available databases:");
         foreach (Database db in server.Databases)
         {
-            Console.WriteLine($" - {db.Name}");
+            if (db.Name == dbName)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($" - {db.Name} (selected)");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($" - {db.Name}");
+            }
         }
+        Console.ResetColor();
 
-        string dbName = sqlBuilder.InitialCatalog;
         var database = server.Databases[dbName];
 
         if (database == null)
@@ -71,6 +83,7 @@ public static class DbScriptManager
         }
 
         // === Script Tables ===
+        int tableCount = 0;
         foreach (Table table in database.Tables)
         {
             if (table.IsSystemObject)
@@ -278,16 +291,27 @@ public static class DbScriptManager
 
                 // Always overwrite the file, do not append
                 File.WriteAllText(tableFile, sb.ToString());
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine($"Scripted: {table.Schema}.{table.Name}");
+                Console.ResetColor();
+                tableCount++;
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(
                     $"Warning: Could not script table {table.Schema}.{table.Name}: {ex.Message}"
                 );
+                Console.ResetColor();
             }
         }
 
-        Console.WriteLine("Finished scripting tables. Moving on to stored procedures...");
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine($"Successfully scripted {tableCount} user-defined tables.");
+        Console.ResetColor();
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("Moving on to stored procedures...");
+        Console.ResetColor();
 
         // === Script Stored Procedures ===
         database.StoredProcedures.Refresh();
@@ -295,16 +319,18 @@ public static class DbScriptManager
         int count = 0;
         foreach (StoredProcedure sp in database.StoredProcedures)
         {
-            if (sp == null || sp.IsSystemObject || sp.IsEncrypted || sp.Schema != "dbo")
+            if (sp == null || sp.IsSystemObject || sp.IsEncrypted)
                 continue;
 
             try
             {
                 sp.Refresh();
+                var now = DateTime.Now;
+                var scriptDate = now.ToString("M/d/yyyy h:mm:ss tt");
                 var options = new ScriptingOptions
                 {
                     ScriptDrops = false,
-                    IncludeHeaders = true,
+                    IncludeHeaders = false,
                     SchemaQualify = true,
                     WithDependencies = false,
                     DriAll = true,
@@ -312,23 +338,45 @@ public static class DbScriptManager
 
                 var scriptCollection = sp.Script(options);
                 string script = string.Join(Environment.NewLine, scriptCollection.Cast<string>());
-                string finalScript = $"{script}\nGO";
+
+                // Remove duplicate SET ANSI_NULLS ON and SET QUOTED_IDENTIFIER ON from the script body
+                script = Regex.Replace(
+                    script,
+                    @"(^|\n)\s*SET\s+ANSI_NULLS\s+ON\s*;?\s*(\n|$)",
+                    "",
+                    RegexOptions.IgnoreCase
+                );
+                script = Regex.Replace(
+                    script,
+                    @"(^|\n)\s*SET\s+QUOTED_IDENTIFIER\s+ON\s*;?\s*(\n|$)",
+                    "",
+                    RegexOptions.IgnoreCase
+                );
+
+                string finalScript =
+                    $"/****** Object:  StoredProcedure [{sp.Schema}].[{sp.Name}]    Script Date: {scriptDate} ******/\nSET ANSI_NULLS ON\nGO\n\nSET QUOTED_IDENTIFIER ON\nGO\n\n{script}\nGO\n";
 
                 File.WriteAllText(Path.Combine(spsPath, $"{sp.Schema}.{sp.Name}.sql"), finalScript);
+                Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine($"Scripted: {sp.Schema}.{sp.Name}");
+                Console.ResetColor();
                 count++;
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Error scripting {sp.Schema}.{sp.Name}: {ex.Message}");
                 if (ex.InnerException != null)
                 {
                     Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
                 }
+                Console.ResetColor();
             }
         }
 
+        Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"Successfully scripted {count} user-defined stored procedures.");
+        Console.ResetColor();
 
         // === Script Views ===
         foreach (View view in database.Views)
@@ -348,7 +396,9 @@ public static class DbScriptManager
             }
         }
 
+        Console.ForegroundColor = ConsoleColor.Cyan;
         Console.WriteLine("Database objects exported successfully to DbScripts folder.");
+        Console.ResetColor();
     }
 
     public static async Task RunScriptsAsync(IServiceProvider services)

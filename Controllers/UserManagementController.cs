@@ -446,12 +446,13 @@ namespace GenericApi.Controllers
         [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [SwaggerOperation(Summary = UsersSummary.RESET_PASSWORD)]
-        public IActionResult ResetUserPasswordById([FromRoute] int userId)
+        public async Task<IActionResult> ResetUserPasswordById([FromRoute] int userId)
         {
             try
             {
                 string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
                 string defaultPassword = _configuration["DefaultPassword"] ?? "";
+
                 if (string.IsNullOrEmpty(defaultPassword) || defaultPassword == "")
                 {
                     return _response.Error(
@@ -461,10 +462,10 @@ namespace GenericApi.Controllers
                     );
                 }
 
-                return _usersService.ChangePassword(
+                return await _usersService.ChangePassword(
                     userId: userId,
                     password: defaultPassword,
-                    ip: ip
+                    confirmPassword: defaultPassword
                 );
             }
             catch (Exception ex)

@@ -9,7 +9,7 @@ namespace GenericApi.Utils.Users
             "Password change failed. Please try again later.";
         public const string USER_NOT_FOUND = "User not found. Please check your credentials.";
 
-        public const string PASSWORD_CHANGED_SUCCESS = "Password has been changed.";
+        public const string SUCCESS = "Password has been changed.";
         public const string CONTAINS_USER_INFO =
             "New password cannot contain your username or email.";
 
