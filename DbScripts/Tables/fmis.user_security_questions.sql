@@ -1,4 +1,4 @@
-/****** Object:  Table [fmis].[user_security_questions]    Script Date: 6/6/2025 1:45:00 PM ******/
+/****** Object:  Table [fmis].[user_security_questions]    Script Date: 6/6/2025 2:13:29 PM ******/
 SET ANSI_NULLS ON
 GO
 
